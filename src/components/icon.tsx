@@ -1,24 +1,43 @@
-// components/Icon.tsx - Alternative version with explicit props
 import React from 'react';
 import { StyleProp, TextStyle } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { FontAwesome } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
-// Export all possible icon names as a type
-export type IconName = 
-  | 'home' 
-  | 'alert-circle' 
-  | 'list' 
-  | 'user' 
-  | 'water' 
-  | 'trash' 
-  | 'lightbulb' 
-  | 'alert-triangle' 
-  | 'map-pin' 
-  | 'chevron-right' 
-  | 'clock' 
-  | 'check-circle';
+// icon.tsx - UPDATED IconName type
+export type IconName =
+  // Basic icons
+  | 'home' | 'alert-circle' | 'list' | 'user'
+  | 'water' | 'trash' | 'lightbulb' | 'alert-triangle'
+  | 'map-pin' | 'chevron-right' | 'clock' | 'check-circle'
+  // Admin icons
+  | 'admin-panel-settings' | 'analytics' | 'map' | 'person'
+  | 'task-alt' | 'verified' | 'pending-actions' | 'refresh'
+  | 'logout' | 'error-outline' | 'apartment'
+  // Form icons
+  | 'person-outline' | 'phone-outlined' | 'email-outlined'
+  | 'lock-outline' | 'lock-person-outlined' | 'login'
+  | 'person-add' | 'build-circle' | 'warning'
+  | 'dashboard' | 'report' | 'analytics-outlined'
+  // Additional icons from your files
+  | 'dashboard' | 'analytics-outlined' | 'report-outlined'
+  | 'map-outlined' | 'person-outline'
+  // ADD THESE SPECIFIC ICONS FOR AdminDashboard
+  | 'assessment'        // For analytics in nav
+  | 'description'       // For report in nav
+  | 'map'               // Already exists
+  | 'person'            // Already exists
+  | 'check-circle'      // Already exists for resolved status
+  | 'build-circle'      // Already exists for in progress status
+  | 'warning'           // Already exists for urgent status
+  | 'pending-actions'   // Already exists for pending status
+  | 'task-alt'          // Already exists for total issues
+  | 'verified'          // Already exists for resolved issues
+  | 'error-outline'     // Already exists for error
+  | 'admin-panel-settings' // Already exists for avatar/header
+  | 'refresh'           // Already exists for refresh button
+  | 'logout';           // Already exists for logout button
 
 interface IconProps {
   name: IconName;
@@ -28,42 +47,91 @@ interface IconProps {
 }
 
 const Icon = ({ name, size = 24, color = '#000', style }: IconProps) => {
-  // Explicit props to avoid TypeScript issues
   const baseProps = {
     size,
     color,
     style: style as StyleProp<TextStyle>,
   };
 
-  switch (name) {
-    case 'home':
-      return <MaterialIcons name="home" {...baseProps} />;
-    case 'alert-circle':
-      return <MaterialIcons name="error-outline" {...baseProps} />;
-    case 'list':
-      return <MaterialIcons name="list" {...baseProps} />;
-    case 'user':
-      return <FontAwesome name="user" {...baseProps} />;
-    case 'water':
-      return <MaterialCommunityIcons name="water" {...baseProps} />;
-    case 'trash':
-      return <FontAwesome name="trash" {...baseProps} />;
-    case 'lightbulb':
-      return <FontAwesome name="lightbulb-o" {...baseProps} />;
-    case 'alert-triangle':
-      return <FontAwesome name="exclamation-triangle" {...baseProps} />;
-    case 'map-pin':
-      return <FontAwesome name="map-marker" {...baseProps} />;
-    case 'chevron-right':
-      return <MaterialIcons name="chevron-right" {...baseProps} />;
-    case 'clock':
-      return <FontAwesome name="clock-o" {...baseProps} />;
-    case 'check-circle':
-      return <FontAwesome name="check-circle" {...baseProps} />;
-    default:
-      // If icon name is not recognized, show a default icon
-      return <MaterialIcons name="help-outline" {...baseProps} />;
+  // MaterialIcons
+  if ([
+    'home', 'list', 'chevron-right', 'error-outline',
+    'admin-panel-settings', 'logout', 'refresh',
+    'email-outlined', 'person-outline', 'phone-outlined',
+    'lock-outline', 'lock-person-outlined'
+  ].includes(name)) {
+    const materialIconMap: Record<string, any> = {
+      'home': 'home',
+      'list': 'list',
+      'chevron-right': 'chevron-right',
+      'error-outline': 'error-outline',
+      'admin-panel-settings': 'admin-panel-settings',
+      'logout': 'logout',
+      'refresh': 'refresh',
+      'email-outlined': 'email',
+      'person-outline': 'person-outline',
+      'phone-outlined': 'phone',
+      'lock-outline': 'lock-outline',
+      'lock-person-outlined': 'lock-person',
+    };
+    return <MaterialIcons name={materialIconMap[name]} {...baseProps} />;
   }
+
+  // FontAwesome
+  if ([
+    'user', 'trash', 'lightbulb', 'alert-triangle',
+    'map-pin', 'clock', 'check-circle', 'warning',
+    'dashboard', 'analytics', 'report', 'person',
+    'assessment', 'description'
+  ].includes(name)) {
+    const faIconMap: Record<string, any> = {
+      'user': 'user',
+      'trash': 'trash',
+      'lightbulb': 'lightbulb-o',
+      'alert-triangle': 'exclamation-triangle',
+      'map-pin': 'map-marker',
+      'clock': 'clock-o',
+      'check-circle': 'check-circle',
+      'warning': 'exclamation-triangle',
+      'dashboard': 'dashboard',
+      'analytics': 'bar-chart',
+      'report': 'flag',
+      'person': 'user',
+      'assessment': 'bar-chart', // ADD THIS - using same as analytics
+      'description': 'file-text-o',
+    };
+    return <FontAwesome name={faIconMap[name]} {...baseProps} />;
+  }
+
+  // MaterialCommunityIcons
+  if ([
+    'water', 'apartment', 'task-alt', 'verified',
+    'pending-actions', 'build-circle', 'analytics-outlined'
+  ].includes(name)) {
+    const mcIconMap: Record<string, any> = {
+      'water': 'water',
+      'apartment': 'office-building',
+      'task-alt': 'clipboard-check',
+      'verified': 'check-decagram',
+      'pending-actions': 'clock-outline',
+      'build-circle': 'hammer-wrench',
+      'analytics-outlined': 'chart-line',
+    };
+    return <MaterialCommunityIcons name={mcIconMap[name]} {...baseProps} />;
+  }
+
+  // Ionicons
+  if (['login', 'person-add', 'map'].includes(name)) {
+    const ioniconMap: Record<string, any> = {
+      'login': 'log-in',
+      'person-add': 'person-add',
+      'map': 'map',
+    };
+    return <Ionicons name={ioniconMap[name]} {...baseProps} />;
+  }
+
+  // Default fallback
+  return <MaterialIcons name="help-outline" {...baseProps} />;
 };
 
 export default Icon;

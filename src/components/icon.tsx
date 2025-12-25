@@ -37,7 +37,54 @@ export type IconName =
   | 'error-outline'     // Already exists for error
   | 'admin-panel-settings' // Already exists for avatar/header
   | 'refresh'           // Already exists for refresh button
-  | 'logout';           // Already exists for logout button
+  | 'logout'
+  | 'directions-bus'
+  | 'park'
+  | 'arrow-back'     // Add this
+  | 'add'           // Add this  
+  | 'visibility'    // Add this
+  | 'shield'        // Add this
+  | 'settings'
+  |'clean-hands'
+  |'road'
+  |'water-drop'
+  |'flash-on'
+  |'more-horiz'
+  |'business'
+  |'calendar-today'
+  |'bar-chart'
+  |'timeline'
+  |'feedback'
+  |'filter-alt'
+  |'auto-awesome'
+  |'close'
+  |'star'
+  |'location-on'
+  |'assignment'
+  |'directions'
+  |'clear-all'
+  |'search'
+  |'expand-less'
+  |'expand-more'
+  |'filter-list'
+  |'remove'
+  |'my-location'
+  |'edit'
+  |'delete'
+  |'report-problem'
+  |'schedule'
+  |'phone'
+  |'email'
+  |'category'
+  |'priority-high'
+  |'notes'
+  |'verified-user'
+  |'inbox'
+  |'check'
+  |'check-circle'
+  |'update'
+  |'done-all'
+  |'track-changes';           // Already exists for logout button
 
 interface IconProps {
   name: IconName;
@@ -54,25 +101,21 @@ const Icon = ({ name, size = 24, color = '#000', style }: IconProps) => {
   };
 
   // MaterialIcons
+  // MaterialIcons section - add these icons:
   if ([
     'home', 'list', 'chevron-right', 'error-outline',
     'admin-panel-settings', 'logout', 'refresh',
     'email-outlined', 'person-outline', 'phone-outlined',
-    'lock-outline', 'lock-person-outlined'
+    'lock-outline', 'lock-person-outlined',
+    'arrow-back', 'add', 'visibility', 'shield', 'settings' // ADD THESE
   ].includes(name)) {
     const materialIconMap: Record<string, any> = {
-      'home': 'home',
-      'list': 'list',
-      'chevron-right': 'chevron-right',
-      'error-outline': 'error-outline',
-      'admin-panel-settings': 'admin-panel-settings',
-      'logout': 'logout',
-      'refresh': 'refresh',
-      'email-outlined': 'email',
-      'person-outline': 'person-outline',
-      'phone-outlined': 'phone',
-      'lock-outline': 'lock-outline',
-      'lock-person-outlined': 'lock-person',
+      // ... existing mappings ...
+      'arrow-back': 'arrow-back',
+      'add': 'add',
+      'visibility': 'visibility',
+      'shield': 'shield',
+      'settings': 'settings',
     };
     return <MaterialIcons name={materialIconMap[name]} {...baseProps} />;
   }

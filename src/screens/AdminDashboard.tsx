@@ -7,20 +7,20 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  FlatList,
-  ActivityIndicator,
+  Animated,
+  Dimensions,
 } from 'react-native';
-import GlassCard from '../components/GlassCard';
-import HoverButton from '../components/HoverButton';
+import { LinearGradient } from 'expo-linear-gradient';
 import Icon, { IconName } from '../components/icon';
 
+const { width } = Dimensions.get('window');
 
 interface StatCard {
   title: string;
   value: number;
   change: string;
-  color: string;
   icon: IconName;
+  color: readonly [string, string];
 }
 
 interface MonthlyTrend {
@@ -31,665 +31,822 @@ interface MonthlyTrend {
 interface DepartmentPerformance {
   department: string;
   progress: number;
+  icon: IconName;
 }
 
 interface RecentReport {
   id: string;
   title: string;
   location: string;
+  time: string;
   status: string;
-  time_ago: string;
+  icon: string;
 }
 
 const AdminDashboard: React.FC = () => {
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [scaleAnim] = useState(new Animated.Value(0.95));
+  const [slideAnim] = useState(new Animated.Value(50));
 
-  const [totalIssues, setTotalIssues] = useState(0);
-  const [resolvedIssues, setResolvedIssues] = useState(0);
-  const [pendingIssues, setPendingIssues] = useState(0);
-  const [userName, setUserName] = useState<string>('Admin User'); // ADD THIS LINE
+  const [totalIssues] = useState(156);
+  const [resolvedIssues] = useState(128);
+  const [pendingIssues] = useState(28);
+  const [citizenScore] = useState(89);
 
-  const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([
+  const monthlyTrends: MonthlyTrend[] = [
     { month: "Jan", issues: 45 },
     { month: "Feb", issues: 52 },
     { month: "Mar", issues: 48 },
     { month: "Apr", issues: 61 },
     { month: "May", issues: 55 },
     { month: "Jun", issues: 58 },
-  ]);
+  ];
 
-  const [departmentPerformance, setDepartmentPerformance] = useState<DepartmentPerformance[]>([
-    { department: "Public Works", progress: 0.85 },
-    { department: "Transportation", progress: 0.72 },
-    { department: "Parks & Recreation", progress: 0.63 },
-    { department: "Public Safety", progress: 0.91 },
-  ]);
+  const departmentPerformance: DepartmentPerformance[] = [
+    { department: "Sanitation Dept", progress: 0.91, icon: "clean-hands" },
+    { department: "Road Dept", progress: 0.85, icon: "road" },
+    { department: "Water Dept", progress: 0.78, icon: "water-drop" },
+    { department: "Electricity Dept", progress: 0.82, icon: "flash-on" },
+    { department: "Other", progress: 0.67, icon: "more-horiz" },
+  ];
 
-  const [recentReports, setRecentReports] = useState<RecentReport[]>([
-    { id: '1', title: "Pothole on Main St", location: "Downtown", status: "Resolved", time_ago: "2 hours ago" },
-    { id: '2', title: "Street Light Out", location: "Northside", status: "In Progress", time_ago: "5 hours ago" },
-    { id: '3', title: "Garbage Overflow", location: "East Park", status: "Pending", time_ago: "1 day ago" },
-    { id: '4', title: "Broken Bench", location: "Central Square", status: "Resolved", time_ago: "3 days ago" },
-  ]);
-
-  const loadDashboardData = async () => {
-    setIsLoading(true);
-    setErrorMessage(null);
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      setTotalIssues(156);
-      setResolvedIssues(128);
-      setPendingIssues(28);
-      setUserName('Admin User'); // Set the username here if you get it from API
-
-      setIsLoading(false);
-    } catch (error) {
-      setErrorMessage('Failed to load dashboard data');
-      setIsLoading(false);
-    }
-  };
+  const recentReports: RecentReport[] = [
+    { id: '1', title: "Pothole on Main St", location: "Downtown", time: "2 hours ago", status: "New", icon: "🚧" },
+    { id: '2', title: "Street Light Out", location: "Northside", time: "5 hours ago", status: "In Progress", icon: "💡" },
+    { id: '3', title: "Garbage Overflow", location: "East Park", time: "1 day ago", status: "Pending", icon: "🗑️" },
+    { id: '4', title: "Broken Bench", location: "Central Square", time: "3 days ago", status: "Resolved", icon: "🪑" },
+  ];
 
   useEffect(() => {
-    loadDashboardData();
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
-  const getStatusColor = (status: string): string => {
-    switch (status.toLowerCase()) {
-      case 'resolved':
-        return '#4CAF50';
-      case 'in progress':
-        return '#2196F3';
-      case 'urgent':
-        return '#F44336';
-      default:
-        return '#FF9800';
-    }
-  };
+  const renderFooter = () => (
+    <Animated.View
+      style={[
+        styles.footer,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }],
+        }
+      ]}
+    >
+      <TouchableOpacity
+        style={[styles.footerButton, selectedIndex === 0 && styles.activeFooterButton]}
+        onPress={() => setSelectedIndex(0)}
+      >
+        <Icon
+          name="dashboard"
+          size={22}
+          color={selectedIndex === 0 ? '#667EEA' : '#8F92A1'}
+        />
+        <Text style={[styles.footerText, selectedIndex === 0 && styles.activeFooterText]}>
+          Dashboard
+        </Text>
+      </TouchableOpacity>
 
-  const getStatusIcon = (status: string): IconName => {
-    switch (status.toLowerCase()) {
-      case 'resolved':
-        return 'check-circle';
-      case 'in progress':
-        return 'build-circle';
-      case 'urgent':
-        return 'warning';
-      default:
-        return 'pending-actions';
-    }
-  };
+      <TouchableOpacity
+        style={[styles.footerButton, selectedIndex === 1 && styles.activeFooterButton]}
+        onPress={() => setSelectedIndex(1)}
+      >
+        <Icon
+          name="analytics"
+          size={22}
+          color={selectedIndex === 1 ? '#667EEA' : '#8F92A1'}
+        />
+        <Text style={[styles.footerText, selectedIndex === 1 && styles.activeFooterText]}>
+          Dept Analysis
+        </Text>
+      </TouchableOpacity>
 
-  const getDepartmentColor = (progress: number): string => {
-    if (progress >= 0.8) return '#4CAF50';
-    if (progress >= 0.6) return '#2196F3';
-    if (progress >= 0.4) return '#FF9800';
-    return '#F44336';
-  };
+      <TouchableOpacity
+        style={[styles.footerButton, selectedIndex === 2 && styles.activeFooterButton]}
+        onPress={() => setSelectedIndex(2)}
+      >
+        <Icon
+          name="description"
+          size={22}
+          color={selectedIndex === 2 ? '#667EEA' : '#8F92A1'}
+        />
+        <Text style={[styles.footerText, selectedIndex === 2 && styles.activeFooterText]}>
+          Issue Reports
+        </Text>
+      </TouchableOpacity>
 
-  const renderStatCard = (title: string, value: number, change: string, color: string, iconName: IconName) => (
-    <GlassCard style={styles.statCard}>
-      <View style={styles.statCardContent}>
-        <Icon name={iconName} size={24} color={color} />
-        <Text style={styles.statCardTitle}>{title}</Text>
-        <Text style={[styles.statCardValue, { color }]}>{value}</Text>
-        {change && <Text style={[styles.statCardChange, { color }]}>{change}</Text>}
-      </View>
-    </GlassCard>
+      <TouchableOpacity
+        style={[styles.footerButton, selectedIndex === 3 && styles.activeFooterButton]}
+        onPress={() => setSelectedIndex(3)}
+      >
+        <Icon
+          name="map"
+          size={22}
+          color={selectedIndex === 3 ? '#667EEA' : '#8F92A1'}
+        />
+        <Text style={[styles.footerText, selectedIndex === 3 && styles.activeFooterText]}>
+          Map View
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.footerButton, selectedIndex === 4 && styles.activeFooterButton]}
+        onPress={() => setSelectedIndex(4)}
+      >
+        <Icon
+          name="person"
+          size={22}
+          color={selectedIndex === 4 ? '#667EEA' : '#8F92A1'}
+        />
+        <Text style={[styles.footerText, selectedIndex === 4 && styles.activeFooterText]}>
+          Profile
+        </Text>
+      </TouchableOpacity>
+    </Animated.View>
   );
 
-  const renderRecentReport = ({ item }: { item: RecentReport }) => (
-    <GlassCard style={styles.reportCard}>
-      <View style={styles.reportHeader}>
-        <View style={[styles.statusIconContainer, { backgroundColor: getStatusColor(item.status) + '20' }]}>
-          <Icon name={getStatusIcon(item.status)} size={20} color={getStatusColor(item.status)} />
+  const renderStatCard = (stat: StatCard, index: number) => (
+    <Animated.View
+      key={index}
+      style={[
+        styles.statCard,
+        {
+          opacity: fadeAnim,
+          transform: [
+            { scale: scaleAnim },
+            { translateY: slideAnim }
+          ],
+        },
+      ]}
+    >
+      <LinearGradient colors={stat.color} style={styles.statCardGradient}>
+        <View style={styles.statHeader}>
+          <Icon name={stat.icon} size={24} color="#FFFFFF" />
+          <Text style={styles.statChange}>{stat.change}</Text>
         </View>
-        <View style={styles.reportInfo}>
-          <Text style={styles.reportTitle}>{item.title}</Text>
-          <Text style={styles.reportSubtitle}>{item.location} • {item.time_ago}</Text>
-        </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
-          <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{item.status}</Text>
-        </View>
-      </View>
-    </GlassCard>
+        <Text style={styles.statCardValue}>{stat.value}</Text>
+        <Text style={styles.statCardTitle}>{stat.title}</Text>
+      </LinearGradient>
+    </Animated.View>
   );
 
-  const renderDepartmentPerformance = ({ item, index }: { item: DepartmentPerformance, index: number }) => {
-    const progressPercent = Math.round(item.progress * 100);
-    const color = getDepartmentColor(item.progress);
-
-    return (
-      <View key={index} style={styles.deptRow}>
-        <Text style={styles.deptName}>{item.department}</Text>
-        <View style={styles.progressBarContainer}>
-          <View style={[styles.progressBar, { width: `${progressPercent}%`, backgroundColor: color }]} />
-        </View>
-        <Text style={[styles.progressPercent, { color }]}>{progressPercent}%</Text>
-      </View>
-    );
-  };
-
-  const renderMonthlyTrends = () => {
+  const renderMonthlyGraph = () => {
     const maxIssues = Math.max(...monthlyTrends.map(t => t.issues));
-    const chartHeight = 150;
 
     return (
-      <View style={styles.chartContainer}>
-        <View style={styles.chartBars}>
+      <View style={styles.graphContainer}>
+        <View style={styles.monthLabels}>
+          {monthlyTrends.map((trend, index) => (
+            <Text key={index} style={styles.monthLabel}>{trend.month}</Text>
+          ))}
+        </View>
+        <View style={styles.graphBars}>
           {monthlyTrends.map((trend, index) => {
-            const barHeight = (trend.issues / maxIssues) * chartHeight;
+            const barHeight = (trend.issues / maxIssues) * 60;
             return (
-              <View key={index} style={styles.chartBarGroup}>
-                <View style={[styles.chartBar, { height: barHeight }]} />
-                <Text style={styles.chartMonth}>{trend.month}</Text>
-              </View>
+              <Animated.View
+                key={index}
+                style={styles.graphBar}
+              >
+                <View style={[styles.bar, { height: barHeight }]}>
+                  <LinearGradient
+                    colors={['#00E5A0', '#00D9F5'] as const}
+                    style={styles.barGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0, y: 1 }}
+                  />
+                </View>
+              </Animated.View>
             );
           })}
         </View>
-        <View style={styles.chartYAxis}>
-          {[0, 20, 40, 60].map((value, index) => (
-            <Text key={index} style={styles.chartYLabel}>{value}</Text>
-          ))}
-        </View>
       </View>
     );
   };
 
-  // Map navigation icons to valid icon names
-  const getNavIconName = (iconKey: string): IconName => {
-    switch (iconKey) {
-      case 'dashboard':
-        return 'dashboard';
-      case 'analytics':
-        return 'analytics'; // Use 'analytics' which exists in your IconName
-      case 'report':
-        return 'report'; // Use 'report' which exists in your IconName
-      case 'map':
-        return 'map';
-      case 'person':
-        return 'person';
-      default:
-        return 'dashboard';
-    }
+  const renderDepartmentCard = (dept: DepartmentPerformance, index: number) => {
+    const progressPercent = Math.round(dept.progress * 100);
+
+    return (
+      <Animated.View
+        key={index}
+        style={[
+          styles.deptCard,
+          {
+            opacity: fadeAnim,
+            transform: [
+              { translateX: slideAnim },
+              { scale: scaleAnim }
+            ],
+          }
+        ]}
+      >
+        <View style={styles.deptIconContainer}>
+          <LinearGradient colors={['#667EEA', '#764BA2'] as const} style={styles.deptIcon}>
+            <Icon name={dept.icon} size={20} color="#FFFFFF" />
+          </LinearGradient>
+        </View>
+        <View style={styles.deptInfo}>
+          <Text style={styles.deptName}>{dept.department}</Text>
+          <View style={styles.deptProgressBar}>
+            <Animated.View
+              style={[
+                styles.deptProgress,
+                {
+                  width: `${progressPercent}%`,
+                  opacity: fadeAnim,
+                }
+              ]}
+            >
+              <LinearGradient
+                colors={['#667EEA', '#764BA2'] as const}
+                style={styles.deptProgressGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              />
+            </Animated.View>
+          </View>
+        </View>
+        <Text style={styles.deptPercent}>{progressPercent}%</Text>
+      </Animated.View>
+    );
   };
 
-  if (errorMessage && !isLoading) {
+  const renderRecentReport = (report: RecentReport, index: number) => {
+    let statusColor = '#FFA726';
+    if (report.status === 'Resolved') statusColor = '#00E5A0';
+    if (report.status === 'New') statusColor = '#667EEA';
+    if (report.status === 'Pending') statusColor = '#FF7043';
+
     return (
-      <SafeAreaView style={styles.errorContainer}>
-        <Icon name="error-outline" size={64} color="#F44336" />
-        <Text style={styles.errorTitle}>Error Loading Dashboard</Text>
-        <Text style={styles.errorMessage}>{errorMessage}</Text>
-        <HoverButton
-          title="Retry"
-          onPress={loadDashboardData}
-          icon="refresh"
-          style={styles.retryButton}
-        />
-      </SafeAreaView>
+      <Animated.View
+        key={report.id}
+        style={[
+          styles.reportCard,
+          {
+            opacity: fadeAnim,
+            transform: [
+              { translateX: slideAnim },
+              {
+                scale: scaleAnim.interpolate({
+                  inputRange: [0.95, 1],
+                  outputRange: [0.98, 1]
+                })
+              }
+            ],
+          }
+        ]}
+      >
+        <View style={styles.reportIcon}>
+          <Text style={styles.reportIconText}>{report.icon}</Text>
+        </View>
+        <View style={styles.reportInfo}>
+          <Text style={styles.reportTitle}>{report.title}</Text>
+          <View style={styles.reportMeta}>
+            <Text style={styles.reportLocation}>{report.location}</Text>
+            <Text style={styles.reportTime}>{report.time}</Text>
+          </View>
+        </View>
+        <View style={[styles.statusBadge, { backgroundColor: `${statusColor}20` }]}>
+          <Text style={[styles.statusText, { color: statusColor }]}>{report.status}</Text>
+        </View>
+      </Animated.View>
     );
-  }
+  };
+
+  // Use 'as const' for color arrays
+  const stats: StatCard[] = [
+    { title: "Total Issues", value: totalIssues, change: "+15%", icon: "task-alt", color: ['#667EEA', '#764BA2'] as const },
+    { title: "Resolved", value: resolvedIssues, change: "+20%", icon: "verified", color: ['#F093FB', '#F5576C'] as const },
+    { title: "Pending", value: pendingIssues, change: "", icon: "pending-actions", color: ['#4FACFE', '#00F2FE'] as const },
+  ];
+
+  const citizenScoreColor = citizenScore >= 80 ? ['#00E5A0', '#00D9F5'] as const :
+    citizenScore >= 60 ? ['#FFB74D', '#FF9800'] as const :
+      ['#F44336', '#D32F2F'] as const;
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#6C63FF" barStyle="light-content" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F5F7FB" />
 
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <View style={styles.headerTitleRow}>
-            <Icon name="admin-panel-settings" size={24} color="#FFFFFF" />
-            <Text style={styles.headerTitle}>UrbanSim AI</Text>
-          </View>
-          <View style={styles.headerActions}>
-            <TouchableOpacity onPress={loadDashboardData} style={styles.headerButton}>
-              <Icon name="refresh" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.headerButton}>
-              <Icon name="logout" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
+      {/* Header */}
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          }
+        ]}
+      >
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>UrbanSim AI</Text>
+          <Text style={styles.headerSubtitle}>Monitor and manage city issues efficiently</Text>
         </View>
-      </View>
+        <TouchableOpacity style={styles.profileButton}>
+          <LinearGradient colors={['#E0C3FC', '#8EC5FC'] as const} style={styles.profileGradient}>
+            <Icon name={"person" as IconName} size={20} color="#FFFFFF" />
+          </LinearGradient>
+        </TouchableOpacity>
+      </Animated.View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-          <GlassCard style={styles.welcomeCard}>
-            <View style={styles.welcomeContent}>
-              <View style={styles.avatarContainer}>
-                <Icon name="admin-panel-settings" size={36} color="#6C63FF" />
-              </View>
-              <View style={styles.welcomeTextContainer}>
-                <Text style={styles.welcomeTitle}>
-                  Hello, {userName?.split(' ').pop()} 👋
-                </Text>
-                <Text style={styles.welcomeSubtitle}>
-                  Monitor and manage city issues efficiently
-                </Text>
-              </View>
-            </View>
-          </GlassCard>
+          {/* Greeting Card */}
+          <Animated.View
+            style={[
+              styles.greetingCard,
+              {
+                opacity: fadeAnim,
+                transform: [{ scale: scaleAnim }],
+              },
+            ]}
+          >
+            <LinearGradient colors={['#667EEA', '#764BA2'] as const} style={styles.greetingGradient}>
+              <Text style={styles.greetingText}>Hello, User</Text>
+              <Text style={styles.greetingSubtext}>Welcome back to your dashboard</Text>
+            </LinearGradient>
+          </Animated.View>
 
-          <View style={styles.statsSection}>
-            {isLoading ? (
-              <View style={styles.loadingStats}>
-                {[1, 2, 3].map((_, index) => (
-                  <GlassCard key={index} style={styles.loadingCard}>
-                    <ActivityIndicator size="small" color="#6C63FF" />
-                    <Text style={styles.loadingText}>Loading...</Text>
-                  </GlassCard>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.statsGrid}>
-                {renderStatCard("Total Issues", totalIssues, "+15% vs last month", "#6C63FF", "task-alt")}
-                {renderStatCard("Resolved", resolvedIssues, "+20%", "#4CAF50", "verified")}
-                {renderStatCard("Pending", pendingIssues, "-5%", "#FF9800", "pending-actions")}
-              </View>
-            )}
+          {/* Stats Grid */}
+          <View style={styles.statsGrid}>
+            {stats.map((stat, index) => renderStatCard(stat, index))}
           </View>
 
-          <Text style={styles.sectionTitle}>Monthly Trends</Text>
-          <GlassCard style={styles.trendsCard}>
-            {isLoading ? (
-              <View style={styles.chartLoading}>
-                <ActivityIndicator size="large" color="#6C63FF" />
-                <Text style={styles.loadingText}>Loading trends...</Text>
+          {/* Citizen Score Section */}
+          <Animated.View
+            style={[
+              styles.scoreSection,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            <LinearGradient colors={citizenScoreColor} style={styles.scoreCard}>
+              <View style={styles.scoreHeader}>
+                <Icon name="star" size={24} color="#FFFFFF" />
+                <Text style={styles.scoreLabel}>Citizen Reputation / Trust Score</Text>
               </View>
-            ) : (
-              renderMonthlyTrends()
-            )}
-          </GlassCard>
+              <Text style={styles.scoreValue}>{citizenScore}</Text>
+              <Text style={styles.scoreDescription}>
+                Based on {totalIssues} submitted issues with {resolvedIssues} resolved
+              </Text>
+              <View style={styles.scoreProgress}>
+                <View style={[styles.scoreProgressFill, { width: `${citizenScore}%` }]} />
+              </View>
+            </LinearGradient>
+          </Animated.View>
 
-          <Text style={styles.sectionTitle}>Department Performance</Text>
-          <GlassCard style={styles.deptCard}>
-            {departmentPerformance.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>No department data available</Text>
-              </View>
-            ) : (
-              <View style={styles.deptList}>
-                {departmentPerformance.map((dept, index) =>
-                  renderDepartmentPerformance({ item: dept, index })
-                )}
-              </View>
-            )}
-          </GlassCard>
+          {/* Monthly Trends */}
+          <Animated.View
+            style={[
+              styles.section,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Monthly Trends</Text>
+            </View>
+            {renderMonthlyGraph()}
+          </Animated.View>
 
-          <Text style={styles.sectionTitle}>Recent Reports</Text>
-          {recentReports.length === 0 ? (
-            <GlassCard style={styles.emptyReportsCard}>
-              <Text style={styles.emptyText}>No recent reports available</Text>
-            </GlassCard>
-          ) : (
-            <FlatList
-              data={recentReports}
-              renderItem={renderRecentReport}
-              keyExtractor={item => item.id}
-              scrollEnabled={false}
-              contentContainerStyle={styles.reportsList}
-            />
-          )}
+          {/* Department Performance */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Department Performance</Text>
+              <TouchableOpacity>
+                <Text style={styles.seeAll}>See all</Text>
+              </TouchableOpacity>
+            </View>
+            {departmentPerformance.map((dept, index) => renderDepartmentCard(dept, index))}
+          </View>
+
+          {/* Recent Reports */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recent Reports</Text>
+              <TouchableOpacity>
+                <Text style={styles.seeAll}>See all</Text>
+              </TouchableOpacity>
+            </View>
+            {recentReports.map((report, index) => renderRecentReport(report, index))}
+          </View>
         </View>
       </ScrollView>
 
-      <View style={styles.bottomNav}>
-        {['dashboard', 'analytics', 'report', 'map', 'person'].map((icon, index) => (
-          <TouchableOpacity
-            key={icon}
-            style={[styles.navItem, selectedIndex === index && styles.navItemActive]}
-            onPress={() => setSelectedIndex(index)}
-          >
-            <Icon
-              name={getNavIconName(icon)} // Fixed: using mapped icon names
-              size={24}
-              color={selectedIndex === index ? '#6C63FF' : '#9E9E9E'}
-            />
-            <Text style={[
-              styles.navLabel,
-              { color: selectedIndex === index ? '#6C63FF' : '#9E9E9E' }
-            ]}>
-              {['Dashboard', 'Dept Analysis', 'Issue Reports', 'Map View', 'Profile'][index]}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {/* Footer */}
+      {renderFooter()}
     </SafeAreaView>
   );
 };
 
-// Styles remain the same...
 const styles = StyleSheet.create({
-  // ... (ALL YOUR EXISTING STYLES REMAIN THE SAME)
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F5F7FB',
   },
   header: {
-    backgroundColor: '#6C63FF',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    elevation: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F5',
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1A1A2E',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#8F92A1',
+    marginTop: 4,
+  },
+  profileButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  profileGradient: {
+    flex: 1,
     alignItems: 'center',
-  },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginLeft: 8,
-  },
-  headerActions: {
-    flexDirection: 'row',
-  },
-  headerButton: {
-    marginLeft: 16,
-    padding: 4,
+    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
-  },
-  welcomeCard: {
-    marginBottom: 24,
-    borderRadius: 20,
-  },
-  welcomeContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
     padding: 20,
+    paddingBottom: 100, // Space for footer
   },
-  avatarContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-    borderWidth: 2,
-    borderColor: '#6C63FF20',
-  },
-  welcomeTextContainer: {
-    flex: 1,
-  },
-  welcomeTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#6C63FF',
-    marginBottom: 6,
-  },
-  welcomeSubtitle: {
-    fontSize: 15,
-    color: '#666666',
-    fontStyle: 'italic',
-  },
-  statsSection: {
+  greetingCard: {
+    height: 120,
+    borderRadius: 20,
+    overflow: 'hidden',
     marginBottom: 20,
+    shadowColor: '#667EEA',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  greetingGradient: {
+    flex: 1,
+    padding: 24,
+    justifyContent: 'center',
+  },
+  greetingText: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  greetingSubtext: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    opacity: 0.9,
+    marginTop: 8,
   },
   statsGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   statCard: {
-    width: '48%',
-    marginBottom: 12,
-    borderRadius: 18,
-    elevation: 4,
+    flex: 1,
+    marginHorizontal: 6,
+    borderRadius: 16,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 5,
   },
-  statCardContent: {
+
+  statCardGradient: {
     padding: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 120,
   },
-  statCardTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#666666',
-    textAlign: 'center',
-    marginTop: 6,
-    marginBottom: 4,
+  statHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 8,
+  },
+  statChange: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    opacity: 0.9,
   },
   statCardValue: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginVertical: 4,
+  },
+  statCardTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    opacity: 0.95,
     textAlign: 'center',
-    marginBottom: 2,
   },
-  statCardChange: {
-    fontSize: 12,
-    fontWeight: '500',
-    textAlign: 'center',
-    opacity: 0.8,
+  scoreSection: {
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
-  loadingStats: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  loadingCard: {
-    width: '48%',
-    marginBottom: 12,
-    padding: 16,
-    alignItems: 'center',
-    borderRadius: 18,
-  },
-  loadingText: {
-    marginTop: 8,
-    color: '#9E9E9E',
-    fontSize: 12,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#6C63FF',
-    marginBottom: 10,
-    marginTop: 4,
-  },
-  trendsCard: {
-    marginBottom: 20,
-    padding: 16,
-    borderRadius: 18,
-    height: 220,
-  },
-  chartContainer: {
-    flex: 1,
-    flexDirection: 'row',
-  },
-  chartYAxis: {
-    width: 30,
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingRight: 8,
-  },
-  chartYLabel: {
-    fontSize: 12,
-    color: '#666666',
-  },
-  chartBars: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'flex-end',
-    paddingBottom: 20,
-  },
-  chartBarGroup: {
+  scoreCard: {
+    borderRadius: 20,
+    padding: 24,
     alignItems: 'center',
   },
-  chartBar: {
-    width: 20,
-    backgroundColor: '#6C63FF',
-    borderTopLeftRadius: 4,
-    borderTopRightRadius: 4,
+  scoreHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  scoreLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginLeft: 12,
+  },
+  scoreValue: {
+    fontSize: 48,
+    fontWeight: '800',
+    color: '#FFFFFF',
     marginBottom: 8,
   },
-  chartMonth: {
-    fontSize: 12,
-    color: '#666666',
-  },
-  chartLoading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deptCard: {
-    marginBottom: 20,
-    padding: 16,
-    borderRadius: 18,
-  },
-  deptList: {
-    marginTop: 8,
-  },
-  deptRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  deptName: {
-    flex: 2,
+  scoreDescription: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#333333',
+    fontWeight: '500',
+    color: '#FFFFFF',
+    opacity: 0.9,
+    textAlign: 'center',
+    marginBottom: 20,
   },
-  progressBarContainer: {
-    flex: 4,
+  scoreProgress: {
+    width: '100%',
     height: 8,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 4,
     overflow: 'hidden',
-    marginHorizontal: 8,
   },
-  progressBar: {
+  scoreProgressFill: {
     height: '100%',
+    backgroundColor: '#FFFFFF',
     borderRadius: 4,
   },
-  progressPercent: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    minWidth: 36,
-    textAlign: 'right',
+  section: {
+    marginBottom: 24,
   },
-  reportsList: {
-    paddingBottom: 20,
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
-  reportCard: {
-    marginBottom: 8,
-    borderRadius: 18,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A2E',
   },
-  reportHeader: {
+  seeAll: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#667EEA',
+  },
+  graphContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  monthLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  monthLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#8F92A1',
+    flex: 1,
+    textAlign: 'center',
+  },
+  graphBars: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    height: 60,
+  },
+  graphBar: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  bar: {
+    width: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  barGradient: {
+    flex: 1,
+  },
+  deptCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  statusIconContainer: {
+  deptIconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    overflow: 'hidden',
     marginRight: 12,
+  },
+  deptIcon: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deptInfo: {
+    flex: 1,
+  },
+  deptName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1A2E',
+    marginBottom: 6,
+  },
+  deptProgressBar: {
+    height: 6,
+    backgroundColor: '#F0F0F5',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  deptProgress: {
+    height: '100%',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  deptProgressGradient: {
+    flex: 1,
+  },
+  deptPercent: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#667EEA',
+    marginLeft: 12,
+  },
+  reportCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  reportIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F0F0F5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  reportIconText: {
+    fontSize: 20,
   },
   reportInfo: {
     flex: 1,
   },
   reportTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 2,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1A2E',
+    marginBottom: 4,
   },
-  reportSubtitle: {
-    fontSize: 13,
-    color: '#666666',
+  reportMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reportLocation: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#8F92A1',
+  },
+  reportTime: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#8F92A1',
+    marginLeft: 8,
+    paddingLeft: 8,
+    borderLeftWidth: 1,
+    borderLeftColor: '#E0E0E0',
   },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
     borderRadius: 12,
   },
   statusText: {
     fontSize: 12,
     fontWeight: '600',
   },
-  emptyReportsCard: {
-    padding: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 18,
-    minHeight: 120,
-  },
-  emptyState: {
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyText: {
-    color: '#9E9E9E',
-    fontSize: 14,
-  },
-  bottomNav: {
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    paddingVertical: 8,
-  },
-  navItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  navItemActive: {},
-  navLabel: {
-    fontSize: 12,
-    marginTop: 4,
-    fontWeight: '500',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-    backgroundColor: '#F5F5F5',
-  },
-  errorTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  errorMessage: {
-    fontSize: 14,
-    color: '#666666',
-    textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  retryButton: {
-    backgroundColor: '#6C63FF',
-    paddingHorizontal: 24,
+    borderTopColor: '#F0F0F5',
+    paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  footerButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  activeFooterButton: {
+    transform: [{ translateY: -4 }],
+  },
+  footerText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#8F92A1',
+    marginTop: 4,
+  },
+  activeFooterText: {
+    color: '#667EEA',
   },
 });
 

@@ -1,8 +1,8 @@
-import AdminDashboard from "../../src/screens/AdminDashboard";
+import HomeScreen from "../../src/screens/HomeScreen";
 import { useRouter } from "expo-router";
 import { TouchableOpacity, Text, View } from "react-native";
 
-export default function Admin() {
+export default function Dashboard() {
   const router = useRouter();
   
   const handleLogout = () => {
@@ -12,7 +12,7 @@ export default function Admin() {
 
   return (
     <View style={{ flex: 1 }}>
-      <AdminDashboard />
+      <HomeScreen />
       {/* Optional logout button */}
       <TouchableOpacity
         style={{

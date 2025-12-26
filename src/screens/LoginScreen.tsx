@@ -1,23 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { IconName } from "../components/icon";
-
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   SafeAreaView,
   StatusBar,
-  ActivityIndicator,
   StyleSheet,
+  Alert,
+  Animated,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import GlassCard from '../components/GlassCard';
 import HoverButton from '../components/HoverButton';
 import Icon from '../components/icon';
 
 interface LoginSignupPageProps {
-  // Props will be handled by expo-router navigation
+  onLoginSuccess?: (isAdmin: boolean) => void;
 }
 
 interface AuthFormData {
@@ -28,7 +30,14 @@ interface AuthFormData {
   confirmPassword?: string;
 }
 
-const LoginSignupPage: React.FC<LoginSignupPageProps> = () => {
+const ADMIN_EMAILS = [
+  'atharv@urbansim.com',
+  'siddhi@urbansim.com'
+];
+
+const { width } = Dimensions.get('window');
+
+const LoginSignupPage: React.FC<LoginSignupPageProps> = ({ onLoginSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<AuthFormData>({
@@ -40,27 +49,45 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = () => {
   });
   const [errors, setErrors] = useState<Partial<Record<keyof AuthFormData, string>>>({});
 
-  const primaryColor = '#4361EE';
-  const secondaryColor = 'rgba(67, 97, 238, 0.1)';
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
+  const primaryColor = '#FF8C42';
+  const secondaryColor = '#4361EE';
+  const API_BASE_URL = 'https://information-sharp-infrared-raise.trycloudflare.com';
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof AuthFormData, string>> = {};
 
-    // Email validation
     if (!formData.email.trim()) {
       newErrors.email = 'Please enter your email';
     } else if (!formData.email.includes('@')) {
       newErrors.email = 'Please enter a valid email';
     }
 
-    // Password validation
     if (!formData.password) {
       newErrors.password = 'Please enter your password';
     } else if (formData.password.length < 6) {
       newErrors.password = 'Password must be at least 6 characters';
     }
 
-    // Signup specific validations
     if (!isLogin) {
       if (!formData.name?.trim()) {
         newErrors.name = 'Please enter your full name';
@@ -85,49 +112,97 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleAuth = async () => {
+  const handleRegister = async () => {
     if (!validateForm()) return;
-
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      console.log(`${isLogin ? 'Login' : 'Register'} attempt with:`, {
-        email: formData.email,
-        name: formData.name,
+      const response = await fetch(`${API_BASE_URL}/api/users/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          full_name: formData.name,
+          mobile_number: formData.phone,
+          is_admin: false
+        }),
       });
 
-      // For demo purposes - hardcoded admin detection
-      const isAdminEmail = formData.email.toLowerCase().endsWith('@admin.com');
-
-      // Simulated successful response
-      const userData = {
-        email: formData.email,
-        user_name: formData.name || 'User',
-        is_admin: isAdminEmail,
-      };
-
-      console.log('Auth successful:', userData);
-
-      // In a real app, this would navigate via expo-router
-      // router.replace(isAdminEmail ? '/admin' : '/dashboard');
-
-      // For now, just show success state
-      alert(`${isLogin ? 'Login' : 'Registration'} successful!`);
-
-    } catch (error) {
-      console.error('Auth error:', error);
-      alert('Authentication failed. Please try again.');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || 'Registration failed');
+      
+      console.log('Registration successful:', data);
+      await handleLogin();
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      Alert.alert('Registration Failed', error.message || 'Unable to create account. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleLogin = async () => {
+    if (!validateForm()) return;
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const responseText = await response.text();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        throw new Error('Server returned invalid JSON');
+      }
+
+      if (!response.ok) {
+        throw new Error(data.detail || `Login failed (${response.status})`);
+      }
+
+      const { access_token, is_admin, user_id, message } = data;
+      const isHardcodedAdmin = ADMIN_EMAILS.includes(formData.email.toLowerCase());
+      const isUserAdmin = is_admin || isHardcodedAdmin;
+
+      if (onLoginSuccess) {
+        onLoginSuccess(isUserAdmin);
+      } else {
+        Alert.alert('Login Successful', isUserAdmin ? 'Admin login successful! Redirecting...' : 'Welcome to UrbanSim AI! Redirecting...');
+      }
+
+      setFormData({ email: '', password: '', name: '', phone: '', confirmPassword: '' });
+    } catch (error: any) {
+      if (error.message.includes('Network request failed')) {
+        Alert.alert('Connection Error', `Cannot connect to server.\n\nTrying to reach: ${API_BASE_URL}\n\nPlease check:\n1. Backend is running\n2. Correct IP address\n3. Both devices on same WiFi`);
+      } else {
+        Alert.alert('Login Failed', error.message || 'Invalid email or password. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAuth = async () => {
+    if (isLogin) {
+      await handleLogin();
+    } else {
+      await handleRegister();
+    }
+  };
+
   const updateFormData = (field: keyof AuthFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error for this field when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }
@@ -135,18 +210,13 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = () => {
 
   const toggleAuthMode = () => {
     setIsLogin(!isLogin);
-    // Reset errors when switching modes
     setErrors({});
-  };
-
-  const handleForgotPassword = () => {
-    alert('Forgot password feature coming soon!');
   };
 
   const renderFormField = (
     field: keyof AuthFormData,
-    label: string,
-    iconName: IconName,  // Change from string to IconName
+    placeholder: string,
+    iconName: IconName,
     options: {
       secureTextEntry?: boolean;
       keyboardType?: 'default' | 'email-address' | 'phone-pad';
@@ -154,26 +224,22 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = () => {
     } = {}
   ) => {
     const { secureTextEntry = false, keyboardType = 'default', showOnlyInSignup = false } = options;
-
     if (showOnlyInSignup && isLogin) return null;
 
     return (
       <View style={styles.formFieldContainer}>
-        <Text style={styles.inputLabel}>{label}</Text>
-        <View style={[
-          styles.inputContainer,
-          errors[field] ? styles.inputError : styles.inputNormal
-        ]}>
-          <Icon name={iconName} size={20} color={primaryColor} style={styles.inputIcon} />
+        <View style={[styles.inputContainer, errors[field] && styles.inputError]}>
+          <Icon name={iconName} size={20} color={errors[field] ? '#EF4444' : '#94A3B8'} style={styles.inputIcon} />
           <TextInput
             style={styles.textInput}
             value={formData[field] || ''}
             onChangeText={(text) => updateFormData(field, text)}
             secureTextEntry={secureTextEntry}
             keyboardType={keyboardType}
-            placeholder={`Enter your ${label.toLowerCase()}`}
-            placeholderTextColor="#9CA3AF"
+            placeholder={placeholder}
+            placeholderTextColor="#94A3B8"
             editable={!isLoading}
+            autoCapitalize={field === 'email' ? 'none' : 'words'}
           />
         </View>
         {errors[field] && <Text style={styles.errorText}>{errors[field]}</Text>}
@@ -183,115 +249,109 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#F9FAFB" barStyle="dark-content" />
+      <StatusBar backgroundColor="#FAFAFA" barStyle="dark-content" />
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
       >
-        <GlassCard style={styles.mainCard}>
-          {/* Logo Section */}
-          <View style={styles.logoContainer}>
-            <View style={[styles.logoCircle, { backgroundColor: secondaryColor }]}>
-              <Icon name="apartment" size={50} color={primaryColor} />
+        <View style={styles.mainContainer}>
+          {/* Header with Logo */}
+          <View style={styles.header}>
+            <View style={styles.logoContainer}>
+              <View style={styles.logoCircle}>
+                <Icon name="apartment" size={32} color="#FFFFFF" />
+              </View>
+              <Text style={styles.logoText}>UrbanSim AI</Text>
             </View>
-            <Text style={styles.logoTitle}>UrbanSim AI</Text>
-            <Text style={styles.logoSubtitle}>
-              AI-powered smart civic issue management
-            </Text>
-          </View>
-
-          {/* Toggle Tabs */}
-          <View style={styles.tabContainer}>
-            <View style={styles.tabBackground}>
-              <TouchableOpacity
-                style={[
-                  styles.tabButton,
-                  isLogin ? styles.tabButtonActive : styles.tabButtonInactive,
-                  { backgroundColor: isLogin ? primaryColor : 'transparent' }
-                ]}
-                onPress={isLogin ? undefined : toggleAuthMode}
-                disabled={isLoading}
-              >
-                <Text style={[
-                  styles.tabText,
-                  { color: isLogin ? '#FFFFFF' : '#6B7280' }
-                ]}>
-                  Sign In
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.tabButton,
-                  !isLogin ? styles.tabButtonActive : styles.tabButtonInactive,
-                  { backgroundColor: !isLogin ? primaryColor : 'transparent' }
-                ]}
-                onPress={!isLogin ? undefined : toggleAuthMode}
-                disabled={isLoading}
-              >
-                <Text style={[
-                  styles.tabText,
-                  { color: !isLogin ? '#FFFFFF' : '#6B7280' }
-                ]}>
-                  Sign Up
-                </Text>
-              </TouchableOpacity>
+            <View style={styles.headerIcons}>
             </View>
           </View>
 
-          {/* Form Card */}
-          <GlassCard style={styles.formCard}>
-            <Text style={styles.formTitle}>
-              {isLogin ? 'Welcome Back' : 'Create Account'}
-            </Text>
-            <Text style={styles.formSubtitle}>
-              {isLogin
-                ? 'Sign in to access the civic issue management system'
-                : 'Join the smart civic issue management system'}
-            </Text>
-
-            {/* Form Fields */}
-            <View style={styles.formFields}>
-              {renderFormField('name', 'Full Name', 'person-outline', { showOnlyInSignup: true })}
-              {renderFormField('phone', 'Phone Number', 'phone-outlined', {
-                keyboardType: 'phone-pad',
-                showOnlyInSignup: true
-              })}
-              {renderFormField('email', 'Email', 'email-outlined', {
-                keyboardType: 'email-address'
-              })}
-              {renderFormField('password', 'Password', 'lock-outline', {
-                secureTextEntry: true
-              })}
-              {renderFormField('confirmPassword', 'Confirm Password', 'lock-person-outlined', {
-                secureTextEntry: true,
-                showOnlyInSignup: true
-              })}
-            </View>
-
-            {/* Submit Button */}
-            <HoverButton
-              title={isLogin ? 'Sign In' : 'Create Account'}
-              onPress={handleAuth}
-              loading={isLoading}
-              style={styles.submitButton}
-              icon={isLoading ? undefined : (isLogin ? 'login' : 'person-add')}
-            />
-
-            {/* Forgot Password */}
-            {isLogin && (
-              <TouchableOpacity
-                style={styles.forgotPasswordButton}
-                onPress={handleForgotPassword}
-                disabled={isLoading}
-              >
-                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-              </TouchableOpacity>
+          <View style={styles.contentRow}>
+            {/* Left Illustration - Hidden on small screens */}
+            {width > 700 && (
+              <View style={styles.illustrationContainer}>
+                <View style={styles.illustration}>
+                  <Text style={styles.illustrationEmoji}>🏙️</Text>
+                </View>
+              </View>
             )}
-          </GlassCard>
-        </GlassCard>
-      </ScrollView>
+
+            {/* Form Card */}
+            <Animated.View 
+              style={[
+                styles.formContainer,
+                { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
+              ]}
+            >
+              <GlassCard style={styles.formCard}>
+                <Text style={styles.formTitle}>
+                  {isLogin ? 'Welcome Back' : "Let's Get Started"}
+                </Text>
+                <Text style={styles.formSubtitle}>
+                  {isLogin 
+                    ? 'Please login or sign up to continue' 
+                    : 'Create your account to access civic management'}
+                </Text>
+
+                {/* Form Fields */}
+                <View style={styles.formFields}>
+                  {renderFormField('name', 'Your Full Name', 'person-outline', { showOnlyInSignup: true })}
+                  {renderFormField('phone', 'Your Phone Number', 'phone-outlined', { keyboardType: 'phone-pad', showOnlyInSignup: true })}
+                  {renderFormField('email', 'Your Email', 'email-outlined', { keyboardType: 'email-address' })}
+                  {renderFormField('password', 'Your Password', 'lock-outline', { secureTextEntry: true })}
+                  {renderFormField('confirmPassword', 'Confirm Password', 'lock-person-outlined', { secureTextEntry: true, showOnlyInSignup: true })}
+                </View>
+
+                {/* Submit Button */}
+                <HoverButton
+                  title={isLogin ? 'Sign In' : 'Sign Up'}
+                  onPress={handleAuth}
+                  loading={isLoading}
+                  style={styles.submitButton}
+                  icon={isLoading ? undefined : (isLogin ? 'login' : 'person-add')}
+                />
+
+                {/* Google Sign In - Optional */}
+                <TouchableOpacity style={styles.googleButton} disabled>
+                  <Icon name="logo-google" size={20} color="#DB4437" />
+                  <Text style={styles.googleButtonText}>Google</Text>
+                </TouchableOpacity>
+
+                {/* Toggle Auth Mode */}
+                <View style={styles.toggleContainer}>
+                  <Text style={styles.toggleText}>
+                    {isLogin ? 'Already Have An Account? ' : "Don't have an account? "}
+                  </Text>
+                  <TouchableOpacity onPress={toggleAuthMode} disabled={isLoading}>
+                    <Text style={styles.toggleLink}>
+                      {isLogin ? 'Login' : 'Sign Up'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Admin Info */}
+                {isLogin && (
+                  <View style={styles.adminBadge}>
+                    <Icon name="shield-checkmark" size={12} color="#4361EE" />
+                    <Text style={styles.adminText}>Admin access restricted</Text>
+                  </View>
+                )}
+              </GlassCard>
+            </Animated.View>
+
+            {/* Right Illustration - Hidden on small screens */}
+            {width > 700 && (
+              <View style={styles.illustrationContainer}>
+                <View style={styles.illustration}>
+                  <Text style={styles.illustrationEmoji}>🌆</Text>
+                </View>
+              </View>
+            )}
+          </View>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -299,154 +359,198 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FAFAFA',
   },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
+  keyboardView: {
+    flex: 1,
+  },
+  mainContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-  },
-  mainCard: {
-    width: '100%',
-    maxWidth: 420,
-    padding: 32,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    paddingVertical: 20,
   },
   logoContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 32,
+    gap: 12,
   },
   logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FF8C42',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
   },
-  logoTitle: {
+  logoText: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#4361EE',
-    letterSpacing: 1.5,
-    marginBottom: 4,
+    color: '#1E293B',
+    letterSpacing: 0.5,
   },
-  logoSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-  tabContainer: {
-    marginBottom: 32,
-  },
-  tabBackground: {
+  headerIcons: {
     flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 15,
-    padding: 6,
+    gap: 12,
   },
-  tabButton: {
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  contentRow: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 40,
+  },
+  illustrationContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  tabButtonActive: {
-    elevation: 3,
-    shadowColor: '#4361EE',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+  illustration: {
+    width: 200,
+    height: 200,
+    backgroundColor: '#FFF4E6',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFE4C4',
   },
-  tabButtonInactive: {
-    backgroundColor: 'transparent',
+  illustrationEmoji: {
+    fontSize: 80,
   },
-  tabText: {
-    fontSize: 15,
-    fontWeight: '600',
+  formContainer: {
+    width: '100%',
+    maxWidth: 440,
   },
   formCard: {
-    padding: 24,
-    borderRadius: 16,
+    padding: 32,
+    borderRadius: 24,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: 'rgba(67, 97, 238, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 30,
+    elevation: 10,
   },
   formTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#4361EE',
-    textAlign: 'center',
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#1E293B',
     marginBottom: 8,
   },
   formSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 20,
+    fontSize: 15,
+    color: '#64748B',
+    marginBottom: 28,
+    lineHeight: 22,
   },
   formFields: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   formFieldContainer: {
     marginBottom: 16,
   },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 8,
-  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    backgroundColor: '#F9FAFB',
-  },
-  inputNormal: {
-    borderColor: '#D1D5DB',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    height: 56,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
   },
   inputError: {
     borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
   },
   inputIcon: {
     marginRight: 12,
   },
   textInput: {
     flex: 1,
-    height: 48,
-    fontSize: 14,
-    color: '#111827',
+    fontSize: 15,
+    color: '#1E293B',
+    fontWeight: '500',
   },
   errorText: {
     fontSize: 12,
     color: '#EF4444',
-    marginTop: 4,
-    marginLeft: 4,
+    marginTop: 6,
+    marginLeft: 16,
+    fontWeight: '500',
   },
   submitButton: {
-    backgroundColor: '#4361EE',
-    borderRadius: 14,
+    backgroundColor: '#FF8C42',
+    borderRadius: 16,
     height: 56,
-    shadowColor: 'rgba(67, 97, 238, 0.4)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
+    shadowColor: '#FF8C42',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+    marginBottom: 16,
   },
-  forgotPasswordButton: {
+  googleButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
-    padding: 8,
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    height: 56,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    gap: 8,
+    marginBottom: 20,
   },
-  forgotPasswordText: {
+  googleButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  toggleText: {
     fontSize: 14,
-    fontWeight: '500',
+    color: '#64748B',
+  },
+  toggleLink: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FF8C42',
+  },
+  adminBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(67, 97, 238, 0.08)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    gap: 6,
+  },
+  adminText: {
+    fontSize: 11,
     color: '#4361EE',
+    fontWeight: '600',
   },
 });
 

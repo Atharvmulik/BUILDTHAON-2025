@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from "expo-router";
 import {
   View,
   Text,
@@ -14,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Icon, { IconName } from '../components/icon';
 
 const { width } = Dimensions.get('window');
+const router = useRouter();
 
 interface StatCard {
   title: string;
@@ -125,7 +127,11 @@ const AdminDashboard: React.FC = () => {
 
       <TouchableOpacity
         style={[styles.footerButton, selectedIndex === 1 && styles.activeFooterButton]}
-        onPress={() => setSelectedIndex(1)}
+        onPress={() => {
+          setSelectedIndex(1);
+          router.push("/admin/dept-analysis");
+        }}
+
       >
         <Icon
           name="analytics"
@@ -139,7 +145,11 @@ const AdminDashboard: React.FC = () => {
 
       <TouchableOpacity
         style={[styles.footerButton, selectedIndex === 2 && styles.activeFooterButton]}
-        onPress={() => setSelectedIndex(2)}
+        // Issue Reports
+        onPress={() => {
+          setSelectedIndex(2);
+          router.push("/admin/issues");
+        }}
       >
         <Icon
           name="description"
@@ -153,7 +163,11 @@ const AdminDashboard: React.FC = () => {
 
       <TouchableOpacity
         style={[styles.footerButton, selectedIndex === 3 && styles.activeFooterButton]}
-        onPress={() => setSelectedIndex(3)}
+        // Map View
+        onPress={() => {
+          setSelectedIndex(3);
+          router.push("/admin/map-view");
+        }}
       >
         <Icon
           name="map"
@@ -167,7 +181,11 @@ const AdminDashboard: React.FC = () => {
 
       <TouchableOpacity
         style={[styles.footerButton, selectedIndex === 4 && styles.activeFooterButton]}
-        onPress={() => setSelectedIndex(4)}
+        // Profile
+        onPress={() => {
+          setSelectedIndex(4);
+          router.push("/admin/profile");
+        }}
       >
         <Icon
           name="person"

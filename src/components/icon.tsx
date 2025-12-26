@@ -84,7 +84,14 @@ export type IconName =
   |'check-circle'
   |'update'
   |'done-all'
-  |'track-changes';           // Already exists for logout button
+  |'track-changes'
+  |'work-outline'
+  |'badge'
+  |'notifications'
+  |'security'
+  |'today'
+  |'logo-google'
+  |'shield-checkmark';           // Already exists for logout button;           // Already exists for logout button
 
 interface IconProps {
   name: IconName;

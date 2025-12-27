@@ -14,19 +14,7 @@ export default function Admin() {
     <View style={{ flex: 1 }}>
       <AdminDashboard />
       {/* Optional logout button */}
-      <TouchableOpacity
-        style={{
-          position: "absolute",
-          bottom: 20,
-          right: 20,
-          backgroundColor: "#EF4444",
-          padding: 12,
-          borderRadius: 8,
-        }}
-        onPress={handleLogout}
-      >
-        <Text style={{ color: "white", fontWeight: "bold" }}>Logout</Text>
-      </TouchableOpacity>
+      
     </View>
   );
 }

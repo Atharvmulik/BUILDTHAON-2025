@@ -13,6 +13,7 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import GlassCard from '../components/GlassCard';
 import HoverButton from '../components/HoverButton';
@@ -55,7 +56,7 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = ({ onLoginSuccess }) => 
 
   const primaryColor = '#FF8C42';
   const secondaryColor = '#4361EE';
-  const API_BASE_URL = 'https://information-sharp-infrared-raise.trycloudflare.com';
+  const API_BASE_URL = 'https://endless-trade-beings-jungle.trycloudflare.com';
 
   useEffect(() => {
     Animated.parallel([
@@ -211,6 +212,14 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = ({ onLoginSuccess }) => 
   const toggleAuthMode = () => {
     setIsLogin(!isLogin);
     setErrors({});
+    // Clear form data when switching modes
+    setFormData({
+      email: '',
+      password: '',
+      name: '',
+      phone: '',
+      confirmPassword: '',
+    });
   };
 
   const renderFormField = (
@@ -254,18 +263,19 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = ({ onLoginSuccess }) => 
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
       >
-        <View style={styles.mainContainer}>
-          {/* Header with Logo */}
-          <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              <View style={styles.logoCircle}>
-                <Icon name="apartment" size={32} color="#FFFFFF" />
-              </View>
-              <Text style={styles.logoText}>UrbanSim AI</Text>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Centered Logo Header */}
+          <View style={styles.headerContainer}>
+            <View style={styles.logoCircle}>
+              <Icon name="apartment" size={32} color="#FFFFFF" />
             </View>
-            <View style={styles.headerIcons}>
-            </View>
+            <Text style={styles.logoText}>UrbanSim AI</Text>
           </View>
 
           <View style={styles.contentRow}>
@@ -313,20 +323,14 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = ({ onLoginSuccess }) => 
                   icon={isLoading ? undefined : (isLogin ? 'login' : 'person-add')}
                 />
 
-                {/* Google Sign In - Optional */}
-                <TouchableOpacity style={styles.googleButton} disabled>
-                  <Icon name="logo-google" size={20} color="#DB4437" />
-                  <Text style={styles.googleButtonText}>Google</Text>
-                </TouchableOpacity>
-
-                {/* Toggle Auth Mode */}
+                {/* Toggle Auth Mode - FIXED TEXT */}
                 <View style={styles.toggleContainer}>
                   <Text style={styles.toggleText}>
-                    {isLogin ? 'Already Have An Account? ' : "Don't have an account? "}
+                    {isLogin ? "Don't have an account? " : 'Already Have An Account? '}
                   </Text>
                   <TouchableOpacity onPress={toggleAuthMode} disabled={isLoading}>
                     <Text style={styles.toggleLink}>
-                      {isLogin ? 'Login' : 'Sign Up'}
+                      {isLogin ? 'Sign Up' : 'Login'}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -350,7 +354,7 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = ({ onLoginSuccess }) => 
               </View>
             )}
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -364,55 +368,42 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
-  mainContainer: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
     paddingVertical: 20,
   },
-  logoContainer: {
-    flexDirection: 'row',
+  headerContainer: {
     alignItems: 'center',
-    gap: 12,
+    marginBottom: 30,
+    marginTop: 20,
   },
   logoCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     backgroundColor: '#FF8C42',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   logoText: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '800',
     color: '#1E293B',
     letterSpacing: 0.5,
   },
-  headerIcons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  iconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
   contentRow: {
-    flex: 1,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 40,
+    paddingHorizontal: 20,
   },
   illustrationContainer: {
     flex: 1,
@@ -435,6 +426,7 @@ const styles = StyleSheet.create({
   formContainer: {
     width: '100%',
     maxWidth: 440,
+    minWidth: 320,
   },
   formCard: {
     padding: 32,
@@ -451,12 +443,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#1E293B',
     marginBottom: 8,
+    textAlign: 'center',
   },
   formSubtitle: {
     fontSize: 15,
     color: '#64748B',
     marginBottom: 28,
     lineHeight: 22,
+    textAlign: 'center',
   },
   formFields: {
     marginBottom: 20,
@@ -504,23 +498,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
     marginBottom: 16,
-  },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    height: 56,
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
-    gap: 8,
-    marginBottom: 20,
-  },
-  googleButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
   },
   toggleContainer: {
     flexDirection: 'row',

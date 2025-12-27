@@ -10,12 +10,12 @@ import {
   StatusBar,
   Animated,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon, { IconName } from '../components/icon';
 
 const { width } = Dimensions.get('window');
-const router = useRouter();
 
 interface StatCard {
   title: string;
@@ -46,6 +46,7 @@ interface RecentReport {
 }
 
 const AdminDashboard: React.FC = () => {
+  const router = useRouter();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [scaleAnim] = useState(new Animated.Value(0.95));
@@ -101,103 +102,91 @@ const AdminDashboard: React.FC = () => {
     ]).start();
   }, []);
 
+  // Smoky white/glass color scheme
+  const smokyWhite = 'rgba(255, 255, 255, 0.8)';
+  const glassBorder = 'rgba(255, 255, 255, 0.2)';
+  const glassShadow = 'rgba(0, 0, 0, 0.1)';
+
   const renderFooter = () => (
-    <Animated.View
-      style={[
-        styles.footer,
-        {
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }],
-        }
-      ]}
+  <Animated.View
+    style={[
+      styles.footer,
+      {
+        opacity: fadeAnim,
+        transform: [{ translateY: slideAnim }],
+      },
+    ]}
+  >
+    {/* Dept Analysis */}
+    <TouchableOpacity
+      style={styles.footerItem}
+      onPress={() => {
+        setSelectedIndex(0);
+        router.push("/admin/dept-analysis");
+      }}
     >
-      <TouchableOpacity
-        style={[styles.footerButton, selectedIndex === 0 && styles.activeFooterButton]}
-        onPress={() => setSelectedIndex(0)}
+      <Icon
+        name="analytics"
+        size={24}
+        color={selectedIndex === 0 ? "#C97A2B" : "#9CA3AF"}
+      />
+      <Text
+        style={[
+          styles.footerLabel,
+          selectedIndex === 0 && styles.footerLabelActive,
+        ]}
       >
-        <Icon
-          name="dashboard"
-          size={22}
-          color={selectedIndex === 0 ? '#667EEA' : '#8F92A1'}
-        />
-        <Text style={[styles.footerText, selectedIndex === 0 && styles.activeFooterText]}>
-          Dashboard
-        </Text>
-      </TouchableOpacity>
+        Dept
+      </Text>
+    </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[styles.footerButton, selectedIndex === 1 && styles.activeFooterButton]}
-        onPress={() => {
-          setSelectedIndex(1);
-          router.push("/admin/dept-analysis");
-        }}
-
+    {/* Issue Reports */}
+    <TouchableOpacity
+      style={styles.footerItem}
+      onPress={() => {
+        setSelectedIndex(1);
+        router.push("/admin/issues");
+      }}
+    >
+      <Icon
+        name="description"
+        size={24}
+        color={selectedIndex === 1 ? "#C97A2B" : "#9CA3AF"}
+      />
+      <Text
+        style={[
+          styles.footerLabel,
+          selectedIndex === 1 && styles.footerLabelActive,
+        ]}
       >
-        <Icon
-          name="analytics"
-          size={22}
-          color={selectedIndex === 1 ? '#667EEA' : '#8F92A1'}
-        />
-        <Text style={[styles.footerText, selectedIndex === 1 && styles.activeFooterText]}>
-          Dept Analysis
-        </Text>
-      </TouchableOpacity>
+        Issues
+      </Text>
+    </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[styles.footerButton, selectedIndex === 2 && styles.activeFooterButton]}
-        // Issue Reports
-        onPress={() => {
-          setSelectedIndex(2);
-          router.push("/admin/issues");
-        }}
+    {/* Map View */}
+    <TouchableOpacity
+      style={styles.footerItem}
+      onPress={() => {
+        setSelectedIndex(2);
+        router.push("/admin/map-view");
+      }}
+    >
+      <Icon
+        name="map"
+        size={24}
+        color={selectedIndex === 2 ? "#C97A2B" : "#9CA3AF"}
+      />
+      <Text
+        style={[
+          styles.footerLabel,
+          selectedIndex === 2 && styles.footerLabelActive,
+        ]}
       >
-        <Icon
-          name="description"
-          size={22}
-          color={selectedIndex === 2 ? '#667EEA' : '#8F92A1'}
-        />
-        <Text style={[styles.footerText, selectedIndex === 2 && styles.activeFooterText]}>
-          Issue Reports
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.footerButton, selectedIndex === 3 && styles.activeFooterButton]}
-        // Map View
-        onPress={() => {
-          setSelectedIndex(3);
-          router.push("/admin/map-view");
-        }}
-      >
-        <Icon
-          name="map"
-          size={22}
-          color={selectedIndex === 3 ? '#667EEA' : '#8F92A1'}
-        />
-        <Text style={[styles.footerText, selectedIndex === 3 && styles.activeFooterText]}>
-          Map View
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.footerButton, selectedIndex === 4 && styles.activeFooterButton]}
-        // Profile
-        onPress={() => {
-          setSelectedIndex(4);
-          router.push("/admin/profile");
-        }}
-      >
-        <Icon
-          name="person"
-          size={22}
-          color={selectedIndex === 4 ? '#667EEA' : '#8F92A1'}
-        />
-        <Text style={[styles.footerText, selectedIndex === 4 && styles.activeFooterText]}>
-          Profile
-        </Text>
-      </TouchableOpacity>
-    </Animated.View>
-  );
+        Map
+      </Text>
+    </TouchableOpacity>
+  </Animated.View>
+);
 
   const renderStatCard = (stat: StatCard, index: number) => (
     <Animated.View
@@ -213,14 +202,18 @@ const AdminDashboard: React.FC = () => {
         },
       ]}
     >
-      <LinearGradient colors={stat.color} style={styles.statCardGradient}>
+      <View style={styles.statCardContent}>
         <View style={styles.statHeader}>
-          <Icon name={stat.icon} size={24} color="#FFFFFF" />
-          <Text style={styles.statChange}>{stat.change}</Text>
+          <View style={styles.statIconContainer}>
+            <LinearGradient colors={stat.color} style={styles.statIconGradient}>
+              <Icon name={stat.icon} size={20} color="#FFFFFF" />
+            </LinearGradient>
+          </View>
+          {stat.change && <Text style={styles.statChange}>{stat.change}</Text>}
         </View>
         <Text style={styles.statCardValue}>{stat.value}</Text>
         <Text style={styles.statCardTitle}>{stat.title}</Text>
-      </LinearGradient>
+      </View>
     </Animated.View>
   );
 
@@ -238,19 +231,16 @@ const AdminDashboard: React.FC = () => {
           {monthlyTrends.map((trend, index) => {
             const barHeight = (trend.issues / maxIssues) * 60;
             return (
-              <Animated.View
-                key={index}
-                style={styles.graphBar}
-              >
+              <View key={index} style={styles.graphBar}>
                 <View style={[styles.bar, { height: barHeight }]}>
                   <LinearGradient
-                    colors={['#00E5A0', '#00D9F5'] as const}
+                    colors={['#6A11CB', '#2575FC']}
                     style={styles.barGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 0, y: 1 }}
                   />
                 </View>
-              </Animated.View>
+              </View>
             );
           })}
         </View>
@@ -276,7 +266,10 @@ const AdminDashboard: React.FC = () => {
         ]}
       >
         <View style={styles.deptIconContainer}>
-          <LinearGradient colors={['#667EEA', '#764BA2'] as const} style={styles.deptIcon}>
+          <LinearGradient 
+            colors={['#6A11CB', '#2575FC']} 
+            style={styles.deptIcon}
+          >
             <Icon name={dept.icon} size={20} color="#FFFFFF" />
           </LinearGradient>
         </View>
@@ -293,7 +286,7 @@ const AdminDashboard: React.FC = () => {
               ]}
             >
               <LinearGradient
-                colors={['#667EEA', '#764BA2'] as const}
+                colors={['#6A11CB', '#2575FC']}
                 style={styles.deptProgressGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
@@ -307,10 +300,10 @@ const AdminDashboard: React.FC = () => {
   };
 
   const renderRecentReport = (report: RecentReport, index: number) => {
-    let statusColor = '#FFA726';
-    if (report.status === 'Resolved') statusColor = '#00E5A0';
-    if (report.status === 'New') statusColor = '#667EEA';
-    if (report.status === 'Pending') statusColor = '#FF7043';
+    let statusColor = '#FF8C00'; // Orange for In Progress
+    if (report.status === 'Resolved') statusColor = '#43A047'; // Green
+    if (report.status === 'New') statusColor = '#600cbaff'; // Purple/Blue
+    if (report.status === 'Pending') statusColor = '#FF5722'; // Deep Orange
 
     return (
       <Animated.View
@@ -331,7 +324,7 @@ const AdminDashboard: React.FC = () => {
           }
         ]}
       >
-        <View style={styles.reportIcon}>
+        <View style={[styles.reportIcon, { backgroundColor: `${statusColor}20` }]}>
           <Text style={styles.reportIconText}>{report.icon}</Text>
         </View>
         <View style={styles.reportInfo}>
@@ -348,16 +341,34 @@ const AdminDashboard: React.FC = () => {
     );
   };
 
-  // Use 'as const' for color arrays
+  // Smoky white cards with colored accents
   const stats: StatCard[] = [
-    { title: "Total Issues", value: totalIssues, change: "+15%", icon: "task-alt", color: ['#667EEA', '#764BA2'] as const },
-    { title: "Resolved", value: resolvedIssues, change: "+20%", icon: "verified", color: ['#F093FB', '#F5576C'] as const },
-    { title: "Pending", value: pendingIssues, change: "", icon: "pending-actions", color: ['#4FACFE', '#00F2FE'] as const },
+    { 
+      title: "Total Issues", 
+      value: totalIssues, 
+      change: "+15%", 
+      icon: "task-alt", 
+      color: ['#6A11CB', '#2575FC'] as const 
+    },
+    { 
+      title: "Resolved", 
+      value: resolvedIssues, 
+      change: "+20%", 
+      icon: "verified", 
+      color: ['#43A047', '#66BB6A'] as const 
+    },
+    { 
+      title: "Pending", 
+      value: pendingIssues, 
+      change: "", 
+      icon: "pending-actions", 
+      color: ['#FF8C00', '#FFB74D'] as const 
+    },
   ];
 
-  const citizenScoreColor = citizenScore >= 80 ? ['#00E5A0', '#00D9F5'] as const :
-    citizenScore >= 60 ? ['#FFB74D', '#FF9800'] as const :
-      ['#F44336', '#D32F2F'] as const;
+  const citizenScoreColor = citizenScore >= 80 ? ['#43A047', '#66BB6A'] as const :
+    citizenScore >= 60 ? ['#FF8C00', '#FFB74D'] as const :
+      ['#E53935', '#EF5350'] as const;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -377,14 +388,24 @@ const AdminDashboard: React.FC = () => {
           <Text style={styles.headerTitle}>UrbanSim AI</Text>
           <Text style={styles.headerSubtitle}>Monitor and manage city issues efficiently</Text>
         </View>
-        <TouchableOpacity style={styles.profileButton}>
-          <LinearGradient colors={['#E0C3FC', '#8EC5FC'] as const} style={styles.profileGradient}>
+        <TouchableOpacity 
+          style={styles.profileButton}
+          onPress={() => router.push("/admin/profile")}
+        >
+          <LinearGradient 
+            colors={['#6A11CB', '#2575FC']} 
+            style={styles.profileGradient}
+          >
             <Icon name={"person" as IconName} size={20} color="#FFFFFF" />
           </LinearGradient>
         </TouchableOpacity>
       </Animated.View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         <View style={styles.content}>
           {/* Greeting Card */}
           <Animated.View
@@ -396,13 +417,18 @@ const AdminDashboard: React.FC = () => {
               },
             ]}
           >
-            <LinearGradient colors={['#667EEA', '#764BA2'] as const} style={styles.greetingGradient}>
-              <Text style={styles.greetingText}>Hello, User</Text>
+            <LinearGradient 
+              colors={['#6A11CB', '#2575FC']} 
+              style={styles.greetingGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Text style={styles.greetingText}>Hello, Admin</Text>
               <Text style={styles.greetingSubtext}>Welcome back to your dashboard</Text>
             </LinearGradient>
           </Animated.View>
 
-          {/* Stats Grid */}
+          {/* Stats Grid - 3 cards side by side */}
           <View style={styles.statsGrid}>
             {stats.map((stat, index) => renderStatCard(stat, index))}
           </View>
@@ -417,7 +443,12 @@ const AdminDashboard: React.FC = () => {
               },
             ]}
           >
-            <LinearGradient colors={citizenScoreColor} style={styles.scoreCard}>
+            <LinearGradient 
+              colors={citizenScoreColor} 
+              style={styles.scoreCard}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
               <View style={styles.scoreHeader}>
                 <Icon name="star" size={24} color="#FFFFFF" />
                 <Text style={styles.scoreLabel}>Citizen Reputation / Trust Score</Text>
@@ -472,7 +503,7 @@ const AdminDashboard: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* Footer */}
+      {/* Improved Footer with only 3 options */}
       {renderFooter()}
     </SafeAreaView>
   );
@@ -489,9 +520,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#fff8f8ff',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F5',
+    borderBottomColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+    marginTop:5
   },
   headerLeft: {
     flex: 1,
@@ -499,11 +536,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1A1A2E',
+    color: '#1E293B',
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#8F92A1',
+    color: '#64748B',
     marginTop: 4,
   },
   profileButton: {
@@ -523,30 +560,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   scrollView: {
-    flex: 1,
+    flex:2 ,
+  },
+  scrollContent: {
+    paddingBottom: 90, // Space for footer
   },
   content: {
     padding: 20,
-    paddingBottom: 100, // Space for footer
   },
   greetingCard: {
-    height: 120,
-    borderRadius: 20,
+    height: 100,
+    borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 20,
-    shadowColor: '#667EEA',
-    shadowOffset: { width: 0, height: 8 },
+    shadowColor: '#6A11CB',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowRadius: 12,
+    elevation: 6,
   },
   greetingGradient: {
     flex: 1,
-    padding: 24,
+    padding: 20,
     justifyContent: 'center',
   },
   greetingText: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: '#FFFFFF',
   },
@@ -555,27 +594,27 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#FFFFFF',
     opacity: 0.9,
-    marginTop: 8,
+    marginTop: 4,
   },
   statsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 20,
+    gap: 12,
   },
   statCard: {
     flex: 1,
-    marginHorizontal: 6,
     borderRadius: 16,
-    overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.08,
     shadowRadius: 12,
-    elevation: 5,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-
-  statCardGradient: {
+  statCardContent: {
     padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -586,25 +625,34 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  statIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  statIconGradient: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statChange: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#FFFFFF',
-    opacity: 0.9,
+    color: '#6A11CB',
   },
   statCardValue: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#1E293B',
     marginVertical: 4,
   },
   statCardTitle: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FFFFFF',
-    opacity: 0.95,
+    color: '#64748B',
     textAlign: 'center',
   },
   scoreSection: {
@@ -616,8 +664,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   scoreCard: {
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
   },
   scoreHeader: {
@@ -644,6 +692,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
     textAlign: 'center',
     marginBottom: 20,
+    paddingHorizontal: 10,
   },
   scoreProgress: {
     width: '100%',
@@ -669,12 +718,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A1A2E',
+    color: '#1E293B',
   },
   seeAll: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#667EEA',
+    color: '#6A11CB',
   },
   graphContainer: {
     backgroundColor: '#FFFFFF',
@@ -694,7 +743,7 @@ const styles = StyleSheet.create({
   monthLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#8F92A1',
+    color: '#64748B',
     flex: 1,
     textAlign: 'center',
   },
@@ -721,12 +770,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
@@ -748,12 +797,12 @@ const styles = StyleSheet.create({
   deptName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A2E',
+    color: '#1E293B',
     marginBottom: 6,
   },
   deptProgressBar: {
     height: 6,
-    backgroundColor: '#F0F0F5',
+    backgroundColor: '#F1F5F9',
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -768,19 +817,19 @@ const styles = StyleSheet.create({
   deptPercent: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#667EEA',
+    color: '#6A11CB',
     marginLeft: 12,
   },
   reportCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
@@ -788,7 +837,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F0F0F5',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -802,30 +850,31 @@ const styles = StyleSheet.create({
   reportTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A2E',
+    color: '#1E293B',
     marginBottom: 4,
   },
   reportMeta: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
   },
   reportLocation: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#8F92A1',
+    color: '#64748B',
   },
   reportTime: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#8F92A1',
+    color: '#64748B',
     marginLeft: 8,
     paddingLeft: 8,
     borderLeftWidth: 1,
-    borderLeftColor: '#E0E0E0',
+    borderLeftColor: '#E2E8F0',
   },
   statusBadge: {
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderRadius: 12,
   },
   statusText: {
@@ -833,38 +882,66 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F5',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 5,
-  },
+  position: "absolute",
+  bottom: 0,
+  left: 0,
+  right: 0,
+  flexDirection: "row",
+  justifyContent: "space-around",
+  alignItems: "center",
+  backgroundColor: "#F6F1EA",
+  paddingVertical: 14,
+  borderTopLeftRadius: 24,
+  borderTopRightRadius: 24,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: -4 },
+  shadowOpacity: 0.15,
+  shadowRadius: 12,
+  elevation: 12,
+},
+footerItem: {
+  alignItems: "center",
+  justifyContent: "center",
+  flex: 1,
+},
+footerLabel: {
+  fontSize: 11,
+  marginTop: 4,
+  color: "#9CA3AF",
+  fontWeight: "600",
+},
+footerLabelActive: {
+  color: "#C97A2B",
+},
   footerButton: {
     flex: 1,
+    marginHorizontal: 4,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  footerButtonGradient: {
     alignItems: 'center',
-    paddingVertical: 8,
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
   },
   activeFooterButton: {
-    transform: [{ translateY: -4 }],
+    shadowColor: '#6A11CB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   footerText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#8F92A1',
+    color: '#6A11CB',
     marginTop: 4,
+    textAlign: 'center',
   },
   activeFooterText: {
-    color: '#667EEA',
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
 });
 

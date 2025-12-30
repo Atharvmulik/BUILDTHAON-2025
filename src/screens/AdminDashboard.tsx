@@ -103,90 +103,90 @@ const AdminDashboard: React.FC = () => {
   }, []);
 
   // Smoky white/glass color scheme
-  const smokyWhite = 'rgba(255, 255, 255, 0.8)';
+  const smokyWhite = 'rgba(253, 248, 248, 0.8)';
   const glassBorder = 'rgba(255, 255, 255, 0.2)';
   const glassShadow = 'rgba(0, 0, 0, 0.1)';
 
   const renderFooter = () => (
-  <Animated.View
-    style={[
-      styles.footer,
-      {
-        opacity: fadeAnim,
-        transform: [{ translateY: slideAnim }],
-      },
-    ]}
-  >
-    {/* Dept Analysis */}
-    <TouchableOpacity
-      style={styles.footerItem}
-      onPress={() => {
-        setSelectedIndex(0);
-        router.push("/admin/dept-analysis");
-      }}
+    <Animated.View
+      style={[
+        styles.footer,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }],
+        },
+      ]}
     >
-      <Icon
-        name="analytics"
-        size={24}
-        color={selectedIndex === 0 ? "#C97A2B" : "#9CA3AF"}
-      />
-      <Text
-        style={[
-          styles.footerLabel,
-          selectedIndex === 0 && styles.footerLabelActive,
-        ]}
+      {/* Dept Analysis */}
+      <TouchableOpacity
+        style={styles.footerItem}
+        onPress={() => {
+          setSelectedIndex(0);
+          router.push("/admin/dept-analysis");
+        }}
       >
-        Dept
-      </Text>
-    </TouchableOpacity>
+        <Icon
+          name="analytics"
+          size={24}
+          color={selectedIndex === 0 ? "#C97A2B" : "#9CA3AF"}
+        />
+        <Text
+          style={[
+            styles.footerLabel,
+            selectedIndex === 0 && styles.footerLabelActive,
+          ]}
+        >
+          Dept
+        </Text>
+      </TouchableOpacity>
 
-    {/* Issue Reports */}
-    <TouchableOpacity
-      style={styles.footerItem}
-      onPress={() => {
-        setSelectedIndex(1);
-        router.push("/admin/issues");
-      }}
-    >
-      <Icon
-        name="description"
-        size={24}
-        color={selectedIndex === 1 ? "#C97A2B" : "#9CA3AF"}
-      />
-      <Text
-        style={[
-          styles.footerLabel,
-          selectedIndex === 1 && styles.footerLabelActive,
-        ]}
+      {/* Issue Reports */}
+      <TouchableOpacity
+        style={styles.footerItem}
+        onPress={() => {
+          setSelectedIndex(1);
+          router.push("/admin/issues");
+        }}
       >
-        Issues
-      </Text>
-    </TouchableOpacity>
+        <Icon
+          name="description"
+          size={24}
+          color={selectedIndex === 1 ? "#C97A2B" : "#9CA3AF"}
+        />
+        <Text
+          style={[
+            styles.footerLabel,
+            selectedIndex === 1 && styles.footerLabelActive,
+          ]}
+        >
+          Issues
+        </Text>
+      </TouchableOpacity>
 
-    {/* Map View */}
-    <TouchableOpacity
-      style={styles.footerItem}
-      onPress={() => {
-        setSelectedIndex(2);
-        router.push("/admin/map-view");
-      }}
-    >
-      <Icon
-        name="map"
-        size={24}
-        color={selectedIndex === 2 ? "#C97A2B" : "#9CA3AF"}
-      />
-      <Text
-        style={[
-          styles.footerLabel,
-          selectedIndex === 2 && styles.footerLabelActive,
-        ]}
+      {/* Map View */}
+      <TouchableOpacity
+        style={styles.footerItem}
+        onPress={() => {
+          setSelectedIndex(2);
+          router.push("/admin/map-view");
+        }}
       >
-        Map
-      </Text>
-    </TouchableOpacity>
-  </Animated.View>
-);
+        <Icon
+          name="map"
+          size={24}
+          color={selectedIndex === 2 ? "#C97A2B" : "#9CA3AF"}
+        />
+        <Text
+          style={[
+            styles.footerLabel,
+            selectedIndex === 2 && styles.footerLabelActive,
+          ]}
+        >
+          Map
+        </Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
 
   const renderStatCard = (stat: StatCard, index: number) => (
     <Animated.View
@@ -266,8 +266,8 @@ const AdminDashboard: React.FC = () => {
         ]}
       >
         <View style={styles.deptIconContainer}>
-          <LinearGradient 
-            colors={['#6A11CB', '#2575FC']} 
+          <LinearGradient
+            colors={['#6A11CB', '#2575FC']}
             style={styles.deptIcon}
           >
             <Icon name={dept.icon} size={20} color="#FFFFFF" />
@@ -343,26 +343,26 @@ const AdminDashboard: React.FC = () => {
 
   // Smoky white cards with colored accents
   const stats: StatCard[] = [
-    { 
-      title: "Total Issues", 
-      value: totalIssues, 
-      change: "+15%", 
-      icon: "task-alt", 
-      color: ['#6A11CB', '#2575FC'] as const 
+    {
+      title: "Total Issues",
+      value: totalIssues,
+      change: "+15%",
+      icon: "task-alt",
+      color: ['#6A11CB', '#2575FC'] as const
     },
-    { 
-      title: "Resolved", 
-      value: resolvedIssues, 
-      change: "+20%", 
-      icon: "verified", 
-      color: ['#43A047', '#66BB6A'] as const 
+    {
+      title: "Resolved",
+      value: resolvedIssues,
+      change: "+20%",
+      icon: "verified",
+      color: ['#43A047', '#66BB6A'] as const
     },
-    { 
-      title: "Pending", 
-      value: pendingIssues, 
-      change: "", 
-      icon: "pending-actions", 
-      color: ['#FF8C00', '#FFB74D'] as const 
+    {
+      title: "Pending",
+      value: pendingIssues,
+      change: "",
+      icon: "pending-actions",
+      color: ['#FF8C00', '#FFB74D'] as const
     },
   ];
 
@@ -388,12 +388,12 @@ const AdminDashboard: React.FC = () => {
           <Text style={styles.headerTitle}>UrbanSim AI</Text>
           <Text style={styles.headerSubtitle}>Monitor and manage city issues efficiently</Text>
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.profileButton}
           onPress={() => router.push("/admin/profile")}
         >
-          <LinearGradient 
-            colors={['#6A11CB', '#2575FC']} 
+          <LinearGradient
+            colors={['#6A11CB', '#2575FC']}
             style={styles.profileGradient}
           >
             <Icon name={"person" as IconName} size={20} color="#FFFFFF" />
@@ -401,8 +401,8 @@ const AdminDashboard: React.FC = () => {
         </TouchableOpacity>
       </Animated.View>
 
-      <ScrollView 
-        style={styles.scrollView} 
+      <ScrollView
+        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
@@ -417,8 +417,8 @@ const AdminDashboard: React.FC = () => {
               },
             ]}
           >
-            <LinearGradient 
-              colors={['#6A11CB', '#2575FC']} 
+            <LinearGradient
+              colors={['#6A11CB', '#2575FC']}
               style={styles.greetingGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -432,52 +432,34 @@ const AdminDashboard: React.FC = () => {
           <View style={styles.statsGrid}>
             {stats.map((stat, index) => renderStatCard(stat, index))}
           </View>
-
-          {/* Citizen Score Section */}
-          <Animated.View
-            style={[
-              styles.scoreSection,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
-          >
-            <LinearGradient 
-              colors={citizenScoreColor} 
-              style={styles.scoreCard}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              <View style={styles.scoreHeader}>
-                <Icon name="star" size={24} color="#FFFFFF" />
-                <Text style={styles.scoreLabel}>Citizen Reputation / Trust Score</Text>
-              </View>
-              <Text style={styles.scoreValue}>{citizenScore}</Text>
-              <Text style={styles.scoreDescription}>
-                Based on {totalIssues} submitted issues with {resolvedIssues} resolved
-              </Text>
-              <View style={styles.scoreProgress}>
-                <View style={[styles.scoreProgressFill, { width: `${citizenScore}%` }]} />
-              </View>
-            </LinearGradient>
-          </Animated.View>
-
-          {/* Monthly Trends */}
+          {/* Resolution Trends */}
           <Animated.View
             style={[
               styles.section,
               {
                 opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
+                transform: [
+                  {
+                    translateY: slideAnim.interpolate({
+                      inputRange: [0, 100],
+                      outputRange: [0, 20],
+                    }),
+                  },
+                ],
               },
             ]}
           >
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Monthly Trends</Text>
+              <Text style={styles.sectionTitle}>
+                Resolution Trends (Last 6 Months)
+              </Text>
+              <Text style={styles.sectionSubtitle}>
+              </Text>
             </View>
+
             {renderMonthlyGraph()}
           </Animated.View>
+
 
           {/* Department Performance */}
           <View style={styles.section}>
@@ -520,27 +502,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff8f8ff',
+    backgroundColor: '#rgba(253, 248, 248, 0.8)',
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-    shadowColor: '#000',
+    borderBottomColor: '#rgba(253, 248, 248, 0.8)',
+    shadowColor: '#300808ff',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
-    marginTop:5
+    marginTop: 15
   },
   headerLeft: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#061122ff',
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#1063d7ff',
     marginTop: 4,
   },
   profileButton: {
@@ -560,7 +542,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   scrollView: {
-    flex:2 ,
+    flex: 2,
   },
   scrollContent: {
     paddingBottom: 90, // Space for footer
@@ -881,38 +863,46 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+
+  sectionSubtitle: {
+    fontSize: 13,
+    color: '#8D99AE',
+    fontWeight: '500',
+    marginTop: 4,
+  },
+
   footer: {
-  position: "absolute",
-  bottom: 0,
-  left: 0,
-  right: 0,
-  flexDirection: "row",
-  justifyContent: "space-around",
-  alignItems: "center",
-  backgroundColor: "#F6F1EA",
-  paddingVertical: 14,
-  borderTopLeftRadius: 24,
-  borderTopRightRadius: 24,
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: -4 },
-  shadowOpacity: 0.15,
-  shadowRadius: 12,
-  elevation: 12,
-},
-footerItem: {
-  alignItems: "center",
-  justifyContent: "center",
-  flex: 1,
-},
-footerLabel: {
-  fontSize: 11,
-  marginTop: 4,
-  color: "#9CA3AF",
-  fontWeight: "600",
-},
-footerLabelActive: {
-  color: "#C97A2B",
-},
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    backgroundColor: "#F6F1EA",
+    paddingVertical: 14,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  footerItem: {
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+  },
+  footerLabel: {
+    fontSize: 11,
+    marginTop: 4,
+    color: "#9CA3AF",
+    fontWeight: "600",
+  },
+  footerLabelActive: {
+    color: "#C97A2B",
+  },
   footerButton: {
     flex: 1,
     marginHorizontal: 4,

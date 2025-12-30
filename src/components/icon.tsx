@@ -155,18 +155,32 @@ const Icon = ({ name, size = 24, color = '#000', style }: IconProps) => {
 
   // MaterialCommunityIcons
   if ([
-    'water', 'apartment', 'task-alt', 'verified',
-    'pending-actions', 'build-circle', 'analytics-outlined'
-  ].includes(name)) {
+  'water',
+  'water-drop',
+  'road',
+  'clean-hands',
+  'flash-on',
+  'apartment',
+  'task-alt',
+  'verified',
+  'pending-actions',
+  'build-circle',
+  'analytics-outlined'
+].includes(name)) {
     const mcIconMap: Record<string, any> = {
-      'water': 'water',
-      'apartment': 'office-building',
-      'task-alt': 'clipboard-check',
-      'verified': 'check-decagram',
-      'pending-actions': 'clock-outline',
-      'build-circle': 'hammer-wrench',
-      'analytics-outlined': 'chart-line',
-    };
+  'water': 'water',
+  'water-drop': 'water',
+  'road': 'road-variant',
+  'clean-hands': 'hand-wash',
+  'flash-on': 'flash',
+  'apartment': 'office-building',
+  'task-alt': 'clipboard-check',
+  'verified': 'check-decagram',
+  'pending-actions': 'clock-outline',
+  'build-circle': 'hammer-wrench',
+  'analytics-outlined': 'chart-line',
+};
+
     return <MaterialCommunityIcons name={mcIconMap[name]} {...baseProps} />;
   }
 

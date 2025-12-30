@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { IconName } from "../components/icon";
+import { API_BASE } from "../config/api";
 import {
   View,
   Text,
@@ -31,10 +32,7 @@ interface AuthFormData {
   confirmPassword?: string;
 }
 
-const ADMIN_EMAILS = [
-  'atharv@urbansim.com',
-  'siddhi@urbansim.com'
-];
+
 
 const { width } = Dimensions.get('window');
 
@@ -56,7 +54,6 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = ({ onLoginSuccess }) => 
 
   const primaryColor = '#FF8C42';
   const secondaryColor = '#4361EE';
-  const API_BASE_URL = 'https://endless-trade-beings-jungle.trycloudflare.com';
 
   useEffect(() => {
     Animated.parallel([
@@ -118,7 +115,7 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = ({ onLoginSuccess }) => 
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/users/register`, {
+      const response = await fetch(`${API_BASE}/users/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -132,7 +129,7 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = ({ onLoginSuccess }) => 
 
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || 'Registration failed');
-      
+
       console.log('Registration successful:', data);
       await handleLogin();
     } catch (error: any) {
@@ -148,7 +145,7 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = ({ onLoginSuccess }) => 
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/login`, {
+      const response = await fetch(`${API_BASE}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -172,20 +169,24 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = ({ onLoginSuccess }) => 
         throw new Error(data.detail || `Login failed (${response.status})`);
       }
 
-      const { access_token, is_admin, user_id, message } = data;
-      const isHardcodedAdmin = ADMIN_EMAILS.includes(formData.email.toLowerCase());
-      const isUserAdmin = is_admin || isHardcodedAdmin;
+      const { access_token, is_admin } = data;
 
       if (onLoginSuccess) {
-        onLoginSuccess(isUserAdmin);
-      } else {
-        Alert.alert('Login Successful', isUserAdmin ? 'Admin login successful! Redirecting...' : 'Welcome to UrbanSim AI! Redirecting...');
+        onLoginSuccess(is_admin);
       }
+
+      Alert.alert(
+        'Login Successful',
+        is_admin
+          ? 'Admin login successful! Redirecting to admin dashboard...'
+          : 'Welcome to UrbanSim AI! Redirecting to user dashboard...'
+      );
+
 
       setFormData({ email: '', password: '', name: '', phone: '', confirmPassword: '' });
     } catch (error: any) {
       if (error.message.includes('Network request failed')) {
-        Alert.alert('Connection Error', `Cannot connect to server.\n\nTrying to reach: ${API_BASE_URL}\n\nPlease check:\n1. Backend is running\n2. Correct IP address\n3. Both devices on same WiFi`);
+        Alert.alert('Connection Error', `Cannot connect to server.\n\nTrying to reach: ${API_BASE}\n\nPlease check:\n1. Backend is running\n2. Correct IP address\n3. Both devices on same WiFi`);
       } else {
         Alert.alert('Login Failed', error.message || 'Invalid email or password. Please try again.');
       }
@@ -260,12 +261,12 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = ({ onLoginSuccess }) => 
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#FAFAFA" barStyle="dark-content" />
 
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -289,7 +290,7 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = ({ onLoginSuccess }) => 
             )}
 
             {/* Form Card */}
-            <Animated.View 
+            <Animated.View
               style={[
                 styles.formContainer,
                 { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
@@ -300,8 +301,8 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = ({ onLoginSuccess }) => 
                   {isLogin ? 'Welcome Back' : "Let's Get Started"}
                 </Text>
                 <Text style={styles.formSubtitle}>
-                  {isLogin 
-                    ? 'Please login or sign up to continue' 
+                  {isLogin
+                    ? 'Please login or sign up to continue'
                     : 'Create your account to access civic management'}
                 </Text>
 

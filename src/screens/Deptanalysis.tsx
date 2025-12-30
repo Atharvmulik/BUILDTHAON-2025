@@ -1,5 +1,7 @@
 // File: DeptAnalysisScreen.tsx
 import React, { useState, useEffect, useRef } from 'react';
+import { Alert } from 'react-native';
+import { API_BASE } from "../config/api";
 import {
   View,
   Text,
@@ -51,8 +53,8 @@ const DeptAnalysisScreen: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<string>("This Month");
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [departmentIssues, setDepartmentIssues] = useState<DepartmentIssue[]>([]);
   const [resolutionTrends, setResolutionTrends] = useState<ResolutionTrend[]>([]);
+  const [departmentIssues, setDepartmentIssues] = useState<DepartmentIssue[]>([]);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState<boolean>(false);
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
@@ -63,9 +65,15 @@ const DeptAnalysisScreen: React.FC = () => {
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
   const rotationAnim = useRef(new Animated.Value(0)).current;
-  const cardScale = departments.map(() => new Animated.Value(1));
+  const cardScale = useRef<Animated.Value[]>([]);
+  const globalScaleAnim = useRef(new Animated.Value(1)).current;
+
+
+  useEffect(() => {
+    cardScale.current = departments.map(() => new Animated.Value(1));
+  }, [departments]);
+
   const chartHeightAnim = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
 
@@ -83,7 +91,6 @@ const DeptAnalysisScreen: React.FC = () => {
     loadDepartmentData();
     startAnimations();
   }, []);
-
   useEffect(() => {
     if (!isLoading) {
       animateCharts();
@@ -103,7 +110,7 @@ const DeptAnalysisScreen: React.FC = () => {
         tension: 40,
         useNativeDriver: true,
       }),
-      Animated.spring(scaleAnim, {
+      Animated.spring(globalScaleAnim, {
         toValue: 1,
         friction: 8,
         tension: 40,
@@ -137,111 +144,32 @@ const DeptAnalysisScreen: React.FC = () => {
   const loadDepartmentData = async () => {
     try {
       setIsLoading(true);
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Mock data - replace with actual API calls
-      const mockDepartments: Department[] = [
-        {
-          id: 1,
-          name: 'Water Dept',
-          internal_name: 'water_dept',
-          icon: 'water-drop',
-          resolved: 45,
-          pending: 12,
-          progress: 8,
-          efficiency: 85.2,
-          total_issues: 65,
-        },
-        {
-          id: 2,
-          name: 'Road Dept',
-          internal_name: 'road_dept',
-          icon: 'road',
-          resolved: 38,
-          pending: 15,
-          progress: 7,
-          efficiency: 72.8,
-          total_issues: 60,
-        },
-        {
-          id: 3,
-          name: 'Sanitation Dept',
-          internal_name: 'sanitation_dept',
-          icon: 'clean-hands',
-          resolved: 52,
-          pending: 8,
-          progress: 5,
-          efficiency: 92.5,
-          total_issues: 65,
-        },
-        {
-          id: 4,
-          name: 'Electricity Dept',
-          internal_name: 'electricity_dept',
-          icon: 'flash-on',
-          resolved: 41,
-          pending: 14,
-          progress: 10,
-          efficiency: 78.3,
-          total_issues: 65,
-        },
-      ];
 
-      const mockDepartmentIssues: DepartmentIssue[] = [
-        { department: 'Water Dept', internal_department: 'water_dept', issues_count: 65 },
-        { department: 'Road Dept', internal_department: 'road_dept', issues_count: 60 },
-        { department: 'Sanitation Dept', internal_department: 'sanitation_dept', issues_count: 65 },
-        { department: 'Electricity Dept', internal_department: 'electricity_dept', issues_count: 65 },
-      ];
+      const [summaryRes, issuesRes, trendsRes] = await Promise.all([
+        fetch(`${API_BASE}/departments/summary`),
+        fetch(`${API_BASE}/departments/issues/by-department`),
+        fetch(`${API_BASE}/departments/resolution-trends`)
+      ]);
 
-      const mockResolutionTrends: ResolutionTrend[] = [
-        {
-          department: 'Water Dept',
-          internal_department: 'water_dept',
-          months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-          data: [65, 72, 78, 82, 85, 85.2],
-        },
-        {
-          department: 'Road Dept',
-          internal_department: 'road_dept',
-          months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-          data: [70, 75, 80, 85, 90, 92.5],
-        },
-      ];
+      const summaryJson = await summaryRes.json();
+      const issuesJson = await issuesRes.json();
+      const trendsJson = await trendsRes.json();
+      console.log("API_BASE USED:", API_BASE);
 
-      // Filter data based on selected department
-      let filteredDepartments = mockDepartments;
-      let filteredIssues = mockDepartmentIssues;
-      let filteredTrends = mockResolutionTrends;
 
-      if (selectedDept !== "All Departments") {
-        filteredDepartments = mockDepartments.filter(dept => 
-          dept.name === selectedDept || dept.internal_name === selectedDept.toLowerCase().replace(' ', '_')
-        );
-        filteredIssues = mockDepartmentIssues.filter(issue => 
-          issue.department === selectedDept || issue.internal_department === selectedDept.toLowerCase().replace(' ', '_')
-        );
-        filteredTrends = mockResolutionTrends.filter(trend => 
-          trend.department === selectedDept || trend.internal_department === selectedDept.toLowerCase().replace(' ', '_')
-        );
-      }
+      setDepartments(summaryJson.departments || []);
+      setDepartmentIssues(issuesJson.data || []);
+      setResolutionTrends(trendsJson.trends || []);
 
-      setDepartments(filteredDepartments);
-      setDepartmentIssues(filteredIssues);
-      setResolutionTrends(filteredTrends);
-      
-      // Mock efficiency trend for detail view
-      setEfficiencyTrend([65, 72, 78, 82, 85, 85.2]);
 
     } catch (error) {
-      console.error('Error loading department data:', error);
+      console.error("Backend connection error:", error);
     } finally {
       setIsLoading(false);
       setRefreshing(false);
     }
   };
+
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -249,58 +177,56 @@ const DeptAnalysisScreen: React.FC = () => {
   };
 
   const triggerAIAssignment = async () => {
-    // Show loading
-    setIsLoading(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Reload data
-    loadDepartmentData();
-    
-    // Show success message
-    alert('AI Assignment', 'AI auto-assignment completed successfully!');
-  };
-
-  const alert = (title: string, message: string) => {
-    // You would typically use a modal or toast here
-    console.log(`${title}: ${message}`);
-  };
-
-  const handleCardPress = (department: Department) => {
-    setSelectedDepartment(department);
-    
-    // Animate card press
-    const index = departments.findIndex(d => d.id === department.id);
-    if (index >= 0 && cardScale[index]) {
-      Animated.sequence([
-        Animated.timing(cardScale[index], {
-          toValue: 0.95,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-        Animated.spring(cardScale[index], {
-          toValue: 1,
-          friction: 3,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-      ]).start();
+    try {
+      setIsLoading(true);
+      await fetch(`${API_BASE}/ai/auto-assign`, { method: "POST" });
+      await loadDepartmentData();
+      Alert.alert("Success", "AI auto-assignment completed");
+    } catch (e) {
+      Alert.alert("Error", "AI service not available");
+    } finally {
+      setIsLoading(false);
     }
-    
-    setShowDetailPage(true);
   };
+
+
+
+
+  const handleCardPress = async (department: Department) => {
+    try {
+      setIsLoading(true);
+
+      const res = await fetch(`${API_BASE}/departments/${department.id}`);
+      const data = await res.json();
+
+      setSelectedDepartment(data);
+      setEfficiencyTrend(data.efficiency_trend);
+      setShowDetailPage(true);
+
+    } catch (error) {
+      console.error("Department detail fetch error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   const submitFeedback = async () => {
     if (!selectedDepartment || !feedbackText.trim()) return;
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    alert('Feedback Submitted', `Feedback submitted for ${selectedDepartment.name}`);
-    setFeedbackText('');
+
+    await fetch(`${API_BASE}/departments/feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        department_id: selectedDepartment.id,
+        feedback_text: feedbackText,
+      }),
+    });
+
+    setFeedbackText("");
     setShowFeedbackModal(false);
   };
+
 
   const renderHeader = () => (
     <Animated.View
@@ -310,7 +236,7 @@ const DeptAnalysisScreen: React.FC = () => {
           opacity: fadeAnim,
           transform: [
             { translateY: slideAnim },
-            { scale: scaleAnim }
+            { scale: globalScaleAnim }
           ],
         },
       ]}
@@ -326,11 +252,15 @@ const DeptAnalysisScreen: React.FC = () => {
             <View style={styles.headerIconContainer}>
               <Icon name="analytics" size={26} color="#FFFFFF" />
             </View>
+
             <View style={styles.headerTextContainer}>
               <Text style={styles.headerTitle}>Department Analysis</Text>
-              <Text style={styles.headerSubtitle}>Track AI-assigned issues & performance</Text>
+              <Text style={styles.headerSubtitle}>
+                Track AI-assigned issues & performance
+              </Text>
             </View>
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={styles.refreshButton}
               onPress={loadDepartmentData}
               disabled={isLoading}
@@ -351,71 +281,19 @@ const DeptAnalysisScreen: React.FC = () => {
               </Animated.View>
             </TouchableOpacity>
           </View>
-
-          <View style={styles.filterRow}>
-            <View style={styles.dropdownContainer}>
-              <Icon name="business" size={18} color="#FFFFFF" style={styles.dropdownIcon} />
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {departmentsList.map((dept, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.filterPill,
-                      selectedDept === dept && styles.filterPillActive,
-                    ]}
-                    onPress={() => {
-                      setSelectedDept(dept);
-                      loadDepartmentData();
-                    }}
-                  >
-                    <Text style={[
-                      styles.filterPillText,
-                      selectedDept === dept && styles.filterPillTextActive,
-                    ]}>
-                      {dept}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-
-            <View style={styles.dropdownContainer}>
-              <Icon name="calendar-today" size={18} color="#FFFFFF" style={styles.dropdownIcon} />
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {periodsList.map((period, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.filterPill,
-                      selectedPeriod === period && styles.filterPillActive,
-                    ]}
-                    onPress={() => {
-                      setSelectedPeriod(period);
-                      loadDepartmentData();
-                    }}
-                  >
-                    <Text style={[
-                      styles.filterPillText,
-                      selectedPeriod === period && styles.filterPillTextActive,
-                    ]}>
-                      {period}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          </View>
         </View>
       </LinearGradient>
     </Animated.View>
   );
 
+
   const renderDepartmentCard = (department: Department, index: number) => {
     const successRate = (department.resolved / (department.total_issues || 1)) * 100;
     const efficiencyColor = department.efficiency >= 85 ? '#4ADE80' :
-                          department.efficiency >= 70 ? '#F59E0B' : '#EF4444';
+      department.efficiency >= 70 ? '#F59E0B' : '#EF4444';
 
-    const cardAnimation = cardScale[index] || new Animated.Value(1);
+    const cardAnimation =
+      cardScale.current[index] ?? new Animated.Value(1);
 
     return (
       <TouchableOpacity
@@ -443,9 +321,13 @@ const DeptAnalysisScreen: React.FC = () => {
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <Icon name={department.icon} size={22} color="#FFFFFF" />
+                <Icon
+                  name={department.icon as IconName}
+                  size={22}
+                  color="#FFFFFF"
+                />
               </LinearGradient>
-              
+
               <View style={styles.efficiencyBadge}>
                 <LinearGradient
                   colors={[efficiencyColor, efficiencyColor + 'CC']}
@@ -470,7 +352,7 @@ const DeptAnalysisScreen: React.FC = () => {
               <Text style={styles.issuesCount}>
                 {department.total_issues} Issues
               </Text>
-              
+
               <Animated.View style={styles.progressContainer}>
                 <View style={styles.progressBackground}>
                   <Animated.View
@@ -496,18 +378,18 @@ const DeptAnalysisScreen: React.FC = () => {
                 </Text>
                 <Text style={styles.statLabel}>Resolved</Text>
               </View>
-              
+
               <View style={styles.statDivider} />
-              
+
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: '#F59E0B' }]}>
                   {department.pending}
                 </Text>
                 <Text style={styles.statLabel}>Pending</Text>
               </View>
-              
+
               <View style={styles.statDivider} />
-              
+
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: '#3B82F6' }]}>
                   {department.progress}
@@ -550,7 +432,7 @@ const DeptAnalysisScreen: React.FC = () => {
         <View style={styles.chartContent}>
           {departmentIssues.map((dept, index) => {
             const barHeight = (dept.issues_count / (maxIssues || 1)) * 140;
-            
+
             return (
               <Animated.View
                 key={index}
@@ -561,7 +443,7 @@ const DeptAnalysisScreen: React.FC = () => {
                     {dept.department.split(' ')[0]}
                   </Text>
                 </View>
-                
+
                 <Animated.View
                   style={[
                     styles.barWrapper,
@@ -580,20 +462,21 @@ const DeptAnalysisScreen: React.FC = () => {
                     end={{ x: 0, y: 0 }}
                   />
                 </Animated.View>
-                
+
                 <Text style={styles.barValue}>{dept.issues_count}</Text>
               </Animated.View>
             );
           })}
         </View>
-        
+
         <View style={styles.yAxis}>
-          {[0, Math.ceil(maxIssues / 2), maxIssues].map((value, index) => (
-            <Text key={index} style={styles.yAxisLabel}>
-              {Math.round(value)}
+          {Array.from({ length: Math.min(5, maxIssues) + 1 }).map((_, i) => (
+            <Text key={i} style={styles.yAxisLabel}>
+              {i}
             </Text>
           ))}
         </View>
+
       </Animated.View>
     );
   };
@@ -645,7 +528,7 @@ const DeptAnalysisScreen: React.FC = () => {
                 </SvgGradient>
               ))}
             </Defs>
-            
+
             {/* Grid lines */}
             {[0, 25, 50, 75, 100].map((y, index) => (
               <Path
@@ -656,40 +539,69 @@ const DeptAnalysisScreen: React.FC = () => {
                 strokeDasharray="4 4"
               />
             ))}
-            
+
             {/* Trend lines */}
             {resolutionTrends.map((trend, trendIndex) => {
-              const points = trend.data.map((value, monthIndex) => {
-                const x = 20 + (monthIndex * (width - 100) / (months.length - 1));
-                const y = 160 - ((value - 50) / 50) * 120;
-                return `${monthIndex === 0 ? 'M' : 'L'} ${x} ${y}`;
-              }).join(' ');
+
+              // ✅ FIX 2 — GUARDS (CRITICAL)
+              if (!trend.data || trend.data.length === 0) return null;
+              if (trend.data.some(v => typeof v !== "number" || isNaN(v))) return null;
+
+              const minValue = Math.min(...trend.data);
+              const maxValue = Math.max(...trend.data);
+              const range = maxValue - minValue;
+
+              const points = trend.data
+                .map((value: number, monthIndex: number) => {
+
+                  const x =
+                    trend.months.length === 1
+                      ? width / 2
+                      : 20 + (monthIndex * (width - 100)) / (trend.months.length - 1);
+
+                  const y =
+                    range === 0
+                      ? 160 / 2
+                      : 160 - ((value - minValue) / range) * 120;
+
+                  return `${monthIndex === 0 ? "M" : "L"} ${x} ${y}`;
+                })
+                .join(" ");
+
+              // ✅ SAFE end X for area fill
+              const endX =
+                trend.months.length === 1
+                  ? width / 2
+                  : 20 + (trend.months.length - 1) * (width - 100) / (trend.months.length - 1);
 
               return (
                 <G key={trendIndex}>
+                  {/* Line */}
                   <Path
                     d={points}
                     stroke={colors[trendIndex % colors.length]}
-                    strokeWidth="2.5"
+                    strokeWidth={2.5}
                     fill="none"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
-                  
+
                   {/* Area under curve */}
                   <Path
-                    d={`${points} L ${20 + ((months.length - 1) * (width - 100) / (months.length - 1))} 160 L 20 160 Z`}
+                    d={`${points} L ${endX} 160 L 20 160 Z`}
                     fill={`url(#gradient${trendIndex})`}
-                    opacity="0.2"
+                    opacity={0.2}
                   />
                 </G>
               );
             })}
+
           </Svg>
-          
+
           {/* X-axis labels */}
           <View style={styles.monthLabels}>
-            {months.map((month, index) => (
+            {months.map((month: string, index: number) => (
+
               <Text key={index} style={styles.monthLabel}>{month}</Text>
             ))}
           </View>
@@ -713,17 +625,17 @@ const DeptAnalysisScreen: React.FC = () => {
       >
         <SafeAreaView style={styles.detailContainer}>
           <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-          
+
           {/* Header */}
           <View style={styles.detailHeader}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.backButton}
               onPress={() => setShowDetailPage(false)}
             >
               <Icon name="arrow-back" size={24} color="#2B2D42" />
             </TouchableOpacity>
             <Text style={styles.detailTitle}>{selectedDepartment.name}</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.feedbackButton}
               onPress={() => setShowFeedbackModal(true)}
             >
@@ -734,7 +646,7 @@ const DeptAnalysisScreen: React.FC = () => {
           <ScrollView style={styles.detailScrollView}>
             {/* Stats Cards */}
             <View style={styles.detailStats}>
-              <Animated.View 
+              <Animated.View
                 style={[
                   styles.detailStatCard,
                   { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
@@ -761,7 +673,7 @@ const DeptAnalysisScreen: React.FC = () => {
                 <Text style={styles.detailStatPct}>{resolvedPct.toFixed(0)}%</Text>
               </Animated.View>
 
-              <Animated.View 
+              <Animated.View
                 style={[
                   styles.detailStatCard,
                   { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
@@ -788,7 +700,7 @@ const DeptAnalysisScreen: React.FC = () => {
                 <Text style={styles.detailStatPct}>{pendingPct.toFixed(0)}%</Text>
               </Animated.View>
 
-              <Animated.View 
+              <Animated.View
                 style={[
                   styles.detailStatCard,
                   { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
@@ -817,7 +729,7 @@ const DeptAnalysisScreen: React.FC = () => {
             </View>
 
             {/* Efficiency Trend */}
-            <Animated.View 
+            <Animated.View
               style={[
                 styles.detailSection,
                 { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
@@ -825,7 +737,7 @@ const DeptAnalysisScreen: React.FC = () => {
             >
               <Text style={styles.sectionTitle}>Efficiency Trend</Text>
               <Text style={styles.sectionSubtitle}>Last 6 months performance</Text>
-              
+
               <View style={styles.efficiencyChart}>
                 <Svg width={width - 64} height={200}>
                   {/* Grid */}
@@ -837,7 +749,7 @@ const DeptAnalysisScreen: React.FC = () => {
                       strokeWidth="1"
                     />
                   ))}
-                  
+
                   {/* Trend line */}
                   <Path
                     d={efficiencyTrend.map((value, index) => {
@@ -850,12 +762,12 @@ const DeptAnalysisScreen: React.FC = () => {
                     fill="none"
                     strokeLinecap="round"
                   />
-                  
+
                   {/* Dots */}
                   {efficiencyTrend.map((value, index) => {
                     const x = 20 + (index * (width - 104) / (efficiencyTrend.length - 1));
                     const y = 200 - ((value - 50) / 50) * 160;
-                    
+
                     return (
                       <G key={index}>
                         <Circle cx={x} cy={y} r="6" fill="#4361EE" />
@@ -864,7 +776,7 @@ const DeptAnalysisScreen: React.FC = () => {
                     );
                   })}
                 </Svg>
-                
+
                 <View style={styles.monthLabels}>
                   {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((month, index) => (
                     <Text key={index} style={styles.monthLabel}>{month}</Text>
@@ -874,14 +786,14 @@ const DeptAnalysisScreen: React.FC = () => {
             </Animated.View>
 
             {/* Pie Chart */}
-            <Animated.View 
+            <Animated.View
               style={[
                 styles.detailSection,
                 { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
               ]}
             >
               <Text style={styles.sectionTitle}>Breakdown</Text>
-              
+
               <View style={styles.pieChartContainer}>
                 <View style={styles.pieChart}>
                   <Svg width={180} height={180} viewBox="0 0 100 100">
@@ -903,7 +815,7 @@ const DeptAnalysisScreen: React.FC = () => {
                     <Circle cx="50" cy="50" r="20" fill="#FFFFFF" />
                   </Svg>
                 </View>
-                
+
                 <View style={styles.pieLegend}>
                   <View style={styles.legendRow}>
                     <View style={[styles.legendColor, { backgroundColor: '#4ADE80' }]} />
@@ -912,7 +824,7 @@ const DeptAnalysisScreen: React.FC = () => {
                       {selectedDepartment.resolved} ({resolvedPct.toFixed(0)}%)
                     </Text>
                   </View>
-                  
+
                   <View style={styles.legendRow}>
                     <View style={[styles.legendColor, { backgroundColor: '#F59E0B' }]} />
                     <Text style={styles.legendLabel}>Pending</Text>
@@ -920,7 +832,7 @@ const DeptAnalysisScreen: React.FC = () => {
                       {selectedDepartment.pending} ({pendingPct.toFixed(0)}%)
                     </Text>
                   </View>
-                  
+
                   <View style={styles.legendRow}>
                     <View style={[styles.legendColor, { backgroundColor: '#3B82F6' }]} />
                     <Text style={styles.legendLabel}>In Progress</Text>
@@ -945,16 +857,16 @@ const DeptAnalysisScreen: React.FC = () => {
       onRequestClose={() => setShowFeedbackModal(false)}
     >
       <View style={styles.modalOverlay}>
-        <Animated.View 
+        <Animated.View
           style={[
             styles.modalContent,
-            { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
+            { opacity: fadeAnim, transform: [{ scale: globalScaleAnim }] }
           ]}
         >
           <Text style={styles.modalTitle}>
             Feedback for {selectedDepartment?.name}
           </Text>
-          
+
           <TextInput
             style={styles.feedbackInput}
             placeholder="Enter feedback or remarks..."
@@ -964,7 +876,7 @@ const DeptAnalysisScreen: React.FC = () => {
             value={feedbackText}
             onChangeText={setFeedbackText}
           />
-          
+
           <View style={styles.modalButtons}>
             <TouchableOpacity
               style={styles.modalButtonCancel}
@@ -972,7 +884,7 @@ const DeptAnalysisScreen: React.FC = () => {
             >
               <Text style={styles.modalButtonCancelText}>Cancel</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.modalButtonSubmit}
               onPress={submitFeedback}
@@ -997,10 +909,14 @@ const DeptAnalysisScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
-        <Animated.View style={{ transform: [{ rotate: rotationAnim.interpolate({
-          inputRange: [0, 1],
-          outputRange: ['0deg', '360deg'],
-        }) }] }}>
+        <Animated.View style={{
+          transform: [{
+            rotate: rotationAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['0deg', '360deg'],
+            })
+          }]
+        }}>
           <Icon name="refresh" size={48} color="#4361EE" />
         </Animated.View>
         <Text style={styles.loadingText}>Loading department data...</Text>
@@ -1011,9 +927,9 @@ const DeptAnalysisScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#4361EE" />
-      
+
       {renderHeader()}
-      
+
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -1106,7 +1022,7 @@ const DeptAnalysisScreen: React.FC = () => {
             ]}
           >
             <Text style={styles.sectionTitle}>Performance Overview</Text>
-            
+
             <View style={styles.chartCard}>
               <Text style={styles.chartTitle}>Issues by Department</Text>
               {renderBarChart()}
@@ -1155,15 +1071,18 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   headerContainer: {
-    margin: 20,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    marginTop: 30,   // 👈 ADD / INCREASE THIS
     borderRadius: 20,
     overflow: 'hidden',
-    shadowColor: '#4361EE',
+    shadowColor: '#cbceddff',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 25,
     elevation: 10,
   },
+
   headerGradient: {
     paddingHorizontal: 24,
     paddingVertical: 20,
@@ -1232,24 +1151,28 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   filterPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginRight: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginRight: 10,
+    backgroundColor: '#5B5FEF', // solid button
   },
+
   filterPillActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: '#FFFFFF',
   },
+
   filterPillText: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  filterPillTextActive: {
     color: '#FFFFFF',
+    fontSize: 13,
     fontWeight: '600',
   },
+
+  filterPillTextActive: {
+    color: '#3A0CA3',
+    fontWeight: '700',
+  },
+
   scrollView: {
     flex: 1,
   },

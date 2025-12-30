@@ -1,824 +1,1825 @@
-// screens/HomeScreen.tsx - WORKING VERSION FOR EXPO 49
-import React, { useState, useRef } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Dimensions,
-  Animated,
+import React, { useState, useRef, useEffect } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  Pressable, 
+  Dimensions, 
+  Animated, 
   StyleSheet,
+  Easing
 } from 'react-native';
-import Icon from '../components/icon';
+import { Home, FileEdit, ClipboardList, User, HelpCircle, Bell, TrendingUp, AlertCircle, CheckCircle, Clock } from 'lucide-react-native';
 
-const { width } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const CARD_WIDTH = 176;
+const CARD_HEIGHT = 224;
 
-// Define TypeScript interfaces
-interface Issue {
-  id: number;
+// Enhanced formal color palette with elegant gradients
+const COLORS = {
+  // Background colors
+  background: '#F8FAFC',
+  backgroundLight: '#FFFFFF',
+  backgroundDark: '#0F172A',
+  
+  // Card colors
+  cardBackground: '#FFFFFF',
+  cardBorder: '#E2E8F0',
+  
+  // Accent colors (refined blue theme)
+  primary: '#2563EB',
+  primaryLight: '#3B82F6',
+  primaryDark: '#1D4ED8',
+  primaryGradient: ['#2563EB', '#3B82F6', '#60A5FA'] as const,
+  
+  // Secondary colors
+  secondary: '#7C3AED',
+  secondaryLight: '#8B5CF6',
+  secondaryDark: '#6D28D9',
+  
+  // Status colors
+  success: '#10B981',
+  successLight: '#34D399',
+  warning: '#F59E0B',
+  warningLight: '#FBBF24',
+  danger: '#EF4444',
+  dangerLight: '#F87171',
+  info: '#6366F1',
+  infoLight: '#818CF8',
+  
+  // Text colors
+  textPrimary: '#1E293B',
+  textSecondary: '#475569',
+  textMuted: '#94A3B8',
+  textLight: '#F8FAFC',
+  
+  // UI Elements
+  border: '#E2E8F0',
+  borderLight: '#F1F5F9',
+  shadow: 'rgba(15, 23, 42, 0.08)',
+  shadowDark: 'rgba(15, 23, 42, 0.15)',
+  
+  // Gradient colors
+  gradientPrimary: ['#4169E1', '#3B82F6', '#60A5FA'] as const,
+  gradientSuccess: ['#10B981', '#34D399'] as const,
+  gradientWarning: ['#F59E0B', '#FBBF24'] as const,
+  gradientDanger: ['#EF4444', '#F87171'] as const,
+  gradientPurple: ['#8B5CF6', '#A78BFA'] as const,
+  gradientTeal: ['#0D9488', '#14B8A6'] as const,
+};
+
+// Animated Components
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+// ==================== Enhanced StatsCard Component ====================
+interface StatsCardProps {
   title: string;
-  location: string;
-  distance: string;
-  status: 'Resolved' | 'In Progress' | 'Pending';
-  urgency: 'URGENT' | 'MEDIUM' | 'LOW';
-  icon: string;
-  description: string;
-  reportedBy: string;
-  date: string;
-  type: string;
+  value: string;
+  subtitle?: string;
+  trend?: string;
+  index: number;
 }
 
-interface QuickReportItem {
-  label: string;
-  icon: string;
-  color: string;
-}
+function EnhancedStatsCard({ title, value, subtitle, trend, index }: StatsCardProps) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
 
-const HomeScreen = () => {
-  const [currentCardIndex, setCurrentCardIndex] = useState(0);
-  const scrollX = useRef(new Animated.Value(0)).current;
-
-  const issues: Issue[] = [
-    {
-      id: 1,
-      title: 'Water Pipe Leak',
-      location: 'Market Road, Zone 3',
-      distance: '0.8km',
-      status: 'Resolved',
-      urgency: 'LOW',
-      icon: 'water',
-      description: 'Water leakage near residential area',
-      reportedBy: 'Siddhil',
-      date: '2 hours ago',
-      type: 'water'
-    },
-    {
-      id: 2,
-      title: 'Garbage Overflow',
-      location: 'Park Street, Zone 2',
-      distance: '1.2km',
-      status: 'In Progress',
-      urgency: 'MEDIUM',
-      icon: 'trash',
-      description: 'Garbage bin overflowing for 2 days',
-      reportedBy: 'Rahul',
-      date: '5 hours ago',
-      type: 'garbage'
-    },
-    {
-      id: 3,
-      title: 'Street Light Fault',
-      location: 'Main Avenue, Zone 1',
-      distance: '1.5km',
-      status: 'Pending',
-      urgency: 'URGENT',
-      icon: 'lightbulb',
-      description: 'Street light not working at night',
-      reportedBy: 'Priya',
-      date: '1 day ago',
-      type: 'lights'
-    },
-    {
-      id: 4,
-      title: 'Pothole on Road',
-      location: 'Highway Road, Zone 4',
-      distance: '2.1km',
-      status: 'Resolved',
-      urgency: 'MEDIUM',
-      icon: 'alert-triangle',
-      description: 'Large pothole causing traffic issues',
-      reportedBy: 'Amit',
-      date: '3 days ago',
-      type: 'pothole'
-    },
-    {
-      id: 5,
-      title: 'Severe Water Logging',
-      location: 'Subhash Nagar, Zone 5',
-      distance: '0.5km',
-      status: 'In Progress',
-      urgency: 'URGENT',
-      icon: 'water',
-      description: 'Water logging after heavy rain',
-      reportedBy: 'Neha',
-      date: '6 hours ago',
-      type: 'water'
-    },
+  const gradients = [
+    COLORS.gradientPrimary,
+    COLORS.gradientPurple,
+    COLORS.gradientTeal
   ];
 
-  const [flippedCards, setFlippedCards] = useState<Record<number, boolean>>({});
-  const flipAnim = useRef(issues.map(() => new Animated.Value(0))).current;
-  const pressAnim = useRef(issues.map(() => new Animated.Value(1))).current;
-  const quickButtonAnims = useRef(new Array(4).fill(0).map(() => new Animated.Value(1))).current;
+  useEffect(() => {
+    Animated.sequence([
+      Animated.delay(index * 150),
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.cubic),
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 50,
+          friction: 7,
+          useNativeDriver: true,
+        }),
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.cubic),
+        })
+      ])
+    ]).start();
+  }, []);
 
-  const handleFlip = (index: number) => {
-    Animated.spring(flipAnim[index], {
-      toValue: flippedCards[index] ? 0 : 1,
-      friction: 8,
-      tension: 10,
-      useNativeDriver: true,
-    }).start();
-    
-    setFlippedCards(prev => ({
-      ...prev,
-      [index]: !prev[index]
-    }));
-  };
-
-  const handlePressIn = (index: number) => {
-    Animated.spring(pressAnim[index], {
-      toValue: 0.95,
-      friction: 3,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = (index: number) => {
-    Animated.spring(pressAnim[index], {
-      toValue: 1,
-      friction: 3,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handleQuickButtonPressIn = (index: number) => {
-    Animated.spring(quickButtonAnims[index], {
-      toValue: 0.9,
-      friction: 3,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handleQuickButtonPressOut = (index: number) => {
-    Animated.spring(quickButtonAnims[index], {
-      toValue: 1,
-      friction: 3,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const getUrgencyColor = (urgency: 'URGENT' | 'MEDIUM' | 'LOW') => {
-    switch(urgency) {
-      case 'URGENT': return '#EF4444';
-      case 'MEDIUM': return '#EAB308';
-      case 'LOW': return '#3B82F6';
-      default: return '#6B7280';
-    }
-  };
-
-  const getStatusColor = (status: 'Resolved' | 'In Progress' | 'Pending') => {
-    switch(status) {
-      case 'Resolved': return '#10B981';
-      case 'In Progress': return '#EAB308';
-      case 'Pending': return '#EF4444';
-      default: return '#6B7280';
-    }
-  };
-
-  const renderCard = (item: Issue, index: number) => {
-    const frontInterpolate = flipAnim[index].interpolate({
-      inputRange: [0, 1],
-      outputRange: ['0deg', '180deg']
-    });
-    const backInterpolate = flipAnim[index].interpolate({
-      inputRange: [0, 1],
-      outputRange: ['180deg', '360deg']
-    });
-
-    const frontAnimatedStyle = {
-      transform: [{ rotateY: frontInterpolate }]
-    };
-    const backAnimatedStyle = {
-      transform: [{ rotateY: backInterpolate }]
-    };
-
-    const urgencyColor = getUrgencyColor(item.urgency);
-    const statusColor = getStatusColor(item.status);
-
-    return (
-      <TouchableOpacity
-        key={item.id}
-        activeOpacity={0.95}
-        onPress={() => handleFlip(index)}
-        onPressIn={() => handlePressIn(index)}
-        onPressOut={() => handlePressOut(index)}
-        style={{ marginHorizontal: 16, width: width * 0.8 }}
-      >
-        <Animated.View style={{ transform: [{ scale: pressAnim[index] }] }}>
-          <View style={{ position: 'relative' }}>
-            {/* Front of Card */}
-            <Animated.View
-              style={[
-                styles.card,
-                styles.cardGlow,
-                frontAnimatedStyle,
-                { 
-                  position: flippedCards[index] ? 'absolute' : 'relative',
-                  backfaceVisibility: 'hidden'
-                }
-              ]}
-            >
-              {/* Tan gradient overlay from bottom */}
-              <View style={styles.tanGradient} />
-              
-              <View style={styles.cardContent}>
-                {/* Icon */}
-                <View style={styles.iconContainer}>
-                  <View style={[styles.icon3DContainer, { backgroundColor: `${urgencyColor}40` }]}>
-                    <View style={styles.iconInnerGlow}>
-                      <Icon name={item.icon as any} size={42} color="#FFFFFF" />
-                    </View>
-                  </View>
-                </View>
-
-                <Text style={styles.cardTitle}>
-                  {item.title}
-                </Text>
-                
-                <View style={styles.locationContainer}>
-                  <View style={styles.smallIcon3D}>
-                    <Icon name="map-pin" size={16} color="#FFFFFF" />
-                  </View>
-                  <Text style={styles.cardLocation}>
-                    {item.location}
-                  </Text>
-                </View>
-
-                <View style={styles.cardFooter}>
-                  <View style={[styles.urgencyBadge, { backgroundColor: urgencyColor }]}>
-                    <Text style={styles.urgencyText}>
-                      {item.urgency}
-                    </Text>
-                  </View>
-                  <Text style={styles.distanceText}>
-                    {item.distance}
-                  </Text>
-                </View>
-
-                <View style={styles.flipHintContainer}>
-                  <Text style={styles.flipHint}>Tap to flip</Text>
-                  <View style={styles.smallIcon3D}>
-                    <Icon name="chevron-right" size={16} color="#FFFFFF" />
-                  </View>
-                </View>
-              </View>
-            </Animated.View>
-
-            {/* Back of Card */}
-            <Animated.View
-              style={[
-                styles.card,
-                styles.cardGlow,
-                backAnimatedStyle,
-                {
-                  position: flippedCards[index] ? 'relative' : 'absolute',
-                  backfaceVisibility: 'hidden'
-                }
-              ]}
-            >
-              {/* Tan gradient overlay from bottom */}
-              <View style={styles.tanGradient} />
-              
-              <View style={styles.cardContent}>
-                <View style={styles.statusContainer}>
-                  <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-                    <Text style={styles.statusText}>
-                      {item.status}
-                    </Text>
-                  </View>
-                </View>
-
-                <Text style={styles.cardDescription}>
-                  {item.description}
-                </Text>
-
-                <View style={styles.infoContainer}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.smallIcon3D}>
-                      <Icon name="clock" size={18} color="#FFFFFF" />
-                    </View>
-                    <Text style={styles.infoText}>Reported: {item.date}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <View style={styles.smallIcon3D}>
-                      <Icon name="user" size={18} color="#FFFFFF" />
-                    </View>
-                    <Text style={styles.infoText}>By: {item.reportedBy}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <View style={styles.smallIcon3D}>
-                      <Icon name="map-pin" size={18} color="#FFFFFF" />
-                    </View>
-                    <Text style={styles.infoText}>Location: {item.location}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.flipBackContainer}>
-                  <View style={styles.smallIcon3D}>
-                    <Icon name="check-circle" size={20} color="#FFFFFF" />
-                  </View>
-                  <Text style={styles.flipBackHint}>Tap to flip back</Text>
-                </View>
-              </View>
-            </Animated.View>
-          </View>
-        </Animated.View>
-      </TouchableOpacity>
-    );
-  };
-
-  const quickReportItems: QuickReportItem[] = [
-    { label: 'Pothole', icon: 'alert-triangle', color: '#CD7F32' },
-    { label: 'Water', icon: 'water', color: '#CD7F32' },
-    { label: 'Garbage', icon: 'trash', color: '#CD7F32' },
-    { label: 'Lights', icon: 'lightbulb', color: '#CD7F32' },
-  ];
+  const rotateY = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['90deg', '0deg'],
+  });
 
   return (
-    <View style={styles.container}>
-      {/* Background glow effect */}
-      <View style={styles.backgroundGlow} />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          Hello, Siddhil
-        </Text>
-        <Text style={styles.headerSubtitle}>
-          Make your city better today
-        </Text>
-      </View>
-
-      {/* Scrollable Cards Section */}
-      <View style={styles.cardsContainer}>
-        <ScrollView
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          decelerationRate="fast"
-          snapToInterval={width * 0.8 + 32}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-            { useNativeDriver: false }
-          )}
-          scrollEventThrottle={16}
-          contentContainerStyle={{ paddingHorizontal: (width - (width * 0.8)) / 2 }}
-          onMomentumScrollEnd={(event) => {
-            const newIndex = Math.round(
-              event.nativeEvent.contentOffset.x / (width * 0.8 + 32)
-            );
-            setCurrentCardIndex(newIndex);
-          }}
-        >
-          {issues.map((item, index) => renderCard(item, index))}
-        </ScrollView>
-
-        {/* Dots Indicator */}
-        <View style={styles.dotsContainer}>
-          {issues.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.dot,
-                currentCardIndex === index ? styles.activeDot : styles.inactiveDot
-              ]}
-            />
-          ))}
-        </View>
-      </View>
-
-      {/* Quick Report Section */}
-      <View style={styles.quickReportContainer}>
-        <Text style={styles.quickReportTitle}>
-          Report an Issue
-        </Text>
-        <View style={styles.quickReportButtons}>
-          {quickReportItems.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              activeOpacity={0.9}
-              onPressIn={() => handleQuickButtonPressIn(index)}
-              onPressOut={() => handleQuickButtonPressOut(index)}
-              style={styles.quickReportButtonWrapper}
-            >
+    <Animated.View
+      style={{
+        flex: 1,
+        opacity: fadeAnim,
+        transform: [
+          { scale: scaleAnim },
+          { rotateY }
+        ],
+      }}
+    >
+      <LinearGradient
+        colors={gradients[index % gradients.length]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          flex: 1,
+          borderRadius: 16,
+          padding: 20,
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.15)',
+          shadowColor: COLORS.shadowDark,
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.3,
+          shadowRadius: 16,
+          elevation: 8,
+          minHeight: 140,
+        }}
+      >
+        <View style={{ flex: 1, justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Text style={{
+              fontSize: 13,
+              fontWeight: '600',
+              color: 'rgba(255, 255, 255, 0.95)',
+              letterSpacing: 0.5,
+            }}>
+              {title}
+            </Text>
+            {trend && (
               <Animated.View 
-                style={[
-                  styles.quickReportButton,
-                  styles.quickButtonGlow,
-                  { backgroundColor: item.color, transform: [{ scale: quickButtonAnims[index] }] }
-                ]}
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  borderRadius: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                  transform: [{
+                    scale: scaleAnim.interpolate({
+                      inputRange: [0.8, 1],
+                      outputRange: [0.8, 1]
+                    })
+                  }]
+                }}
               >
-                <View style={[styles.quickIconContainer, styles.quickIcon3D]}>
-                  <Icon name={item.icon as any} size={32} color="#FFFFFF" />
-                </View>
-                <Text style={styles.quickButtonText}>
-                  {item.label}
+                <TrendingUp size={12} color="#FFFFFF" />
+                <Text style={{
+                  fontSize: 10,
+                  fontWeight: '700',
+                  color: '#FFFFFF',
+                }}>
+                  {trend}
                 </Text>
               </Animated.View>
-            </TouchableOpacity>
-          ))}
+            )}
+          </View>
+          
+          <View>
+            <Text style={{
+              fontSize: 28,
+              fontWeight: '800',
+              color: '#FFFFFF',
+              marginBottom: subtitle ? 4 : 0,
+              textShadowColor: 'rgba(0, 0, 0, 0.1)',
+              textShadowOffset: { width: 0, height: 2 },
+              textShadowRadius: 4,
+            }}>
+              {value}
+            </Text>
+            {subtitle && (
+              <Text style={{
+                fontSize: 12,
+                color: 'rgba(255, 255, 255, 0.8)',
+                letterSpacing: 0.3,
+              }}>
+                {subtitle}
+              </Text>
+            )}
+          </View>
+        </View>
+        
+        {/* Animated Background Pattern */}
+        <Animated.View
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            width: 60,
+            height: 60,
+            opacity: 0.1,
+            transform: [{
+              rotate: rotateAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['0deg', '360deg']
+              })
+            }]
+          }}
+        >
+          <LinearGradient
+            colors={['rgba(255, 255, 255, 0.3)', 'transparent']}
+            style={{ flex: 1 }}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
+        </Animated.View>
+      </LinearGradient>
+    </Animated.View>
+  );
+}
+
+// ==================== Enhanced Header Component ====================
+function EnhancedHeader() {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(-50)).current;
+  const [notificationCount, setNotificationCount] = useState(3);
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic),
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 50,
+        friction: 8,
+        useNativeDriver: true,
+      })
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View 
+      style={{
+        backgroundColor: COLORS.backgroundDark,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+        paddingHorizontal: 24,
+        paddingTop: 40,
+        paddingBottom: 20,
+        opacity: fadeAnim,
+        transform: [{ translateY: slideAnim }],
+      }}
+    >
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Animated.View 
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 12,
+              backgroundColor: COLORS.primary,
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: COLORS.primary,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 4,
+            }}
+          >
+            <Text style={{
+              fontFamily: 'System',
+              fontWeight: '800',
+              fontSize: 20,
+              color: COLORS.textLight,
+            }}>
+              U
+            </Text>
+          </Animated.View>
+          <View style={{ flexDirection: 'column', justifyContent: 'center' }}>
+            <Text style={{
+              fontFamily: 'System',
+              fontWeight: '700',
+              fontSize: 20,
+              color: COLORS.textLight,
+              letterSpacing: 0.5,
+              lineHeight: 24,
+            }}>
+              UrbanSim AI
+            </Text>
+            <Text style={{
+              fontFamily: 'System',
+              fontSize: 12,
+              color: 'rgba(255, 255, 255, 0.7)',
+              marginTop: 2,
+            }}>
+              Citizen Dashboard
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Pressable style={({ pressed }) => ({
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: 'rgba(255, 255, 255, 0.15)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: pressed ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+            transform: [{ scale: pressed ? 0.95 : 1 }],
+          })}>
+            <HelpCircle size={20} color={COLORS.textLight} />
+          </Pressable>
+          
+          <Pressable style={({ pressed }) => ({
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: 'rgba(255, 255, 255, 0.15)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: pressed ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+            transform: [{ scale: pressed ? 0.95 : 1 }],
+            position: 'relative',
+          })}>
+            <Bell size={20} color={COLORS.textLight} />
+            {notificationCount > 0 && (
+              <View style={{
+                position: 'absolute',
+                top: -4,
+                right: -4,
+                minWidth: 18,
+                height: 18,
+                borderRadius: 9,
+                backgroundColor: COLORS.danger,
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingHorizontal: 4,
+              }}>
+                <Text style={{
+                  fontSize: 10,
+                  fontWeight: '700',
+                  color: COLORS.textLight,
+                }}>
+                  {notificationCount}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+          
+          <Pressable style={({ pressed }) => ({
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: 'rgba(255, 255, 255, 0.15)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: pressed ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+            transform: [{ scale: pressed ? 0.95 : 1 }],
+          })}>
+            <User size={20} color={COLORS.textLight} />
+          </Pressable>
         </View>
       </View>
+    </Animated.View>
+  );
+}
 
-      {/* Reported Issues Summary */}
-      <View style={styles.summaryContainer}>
-        <TouchableOpacity 
-          activeOpacity={0.9}
-          onPressIn={() => handleQuickButtonPressIn(0)}
-          onPressOut={() => handleQuickButtonPressOut(0)}
-          style={styles.summaryButtonWrapper}
-        >
-          <Animated.View 
-            style={[
-              styles.summaryCard,
-              styles.summaryCardGlow,
-              { transform: [{ scale: quickButtonAnims[0] }] }
-            ]}
-          >
-            <View style={styles.summaryContent}>
-              <View>
-                <Text style={styles.summaryTitle}>
-                  Reported Issues
-                </Text>
-                <Text style={styles.summarySubtitle}>
-                  5 issues reported • 2 resolved
-                </Text>
-              </View>
-              <View style={[styles.summaryIcon, styles.summaryIcon3D]}>
-                <Icon name="chevron-right" size={24} color="#FFFFFF" />
-              </View>
-            </View>
-          </Animated.View>
-        </TouchableOpacity>
+// ==================== Enhanced Greeting Section ====================
+function EnhancedGreetingSection() {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const waveAnim = useRef(new Animated.Value(0)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
+  const [isPressed, setIsPressed] = useState(false);
 
-        <TouchableOpacity 
-          activeOpacity={0.9}
-          onPressIn={() => handleQuickButtonPressIn(1)}
-          onPressOut={() => handleQuickButtonPressOut(1)}
-          style={[styles.summaryButtonWrapper, { marginTop: 16 }]}
-        >
-          <Animated.View 
-            style={[
-              styles.summaryCard,
-              styles.summaryCardGlow,
-              { transform: [{ scale: quickButtonAnims[1] }] }
-            ]}
+  useEffect(() => {
+    // Entry animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic),
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 60,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 60,
+        friction: 8,
+        useNativeDriver: true,
+      })
+    ]).start();
+
+    // Continuous animations
+    const waveAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(waveAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        Animated.timing(waveAnim, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+      ])
+    );
+
+    const glowAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 1,
+          duration: 3000,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0,
+          duration: 3000,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+      ])
+    );
+
+    // Start loop animations
+    waveAnimation.start();
+    glowAnimation.start();
+
+    // Cleanup
+    return () => {
+      waveAnimation.stop();
+      glowAnimation.stop();
+    };
+  }, []);
+
+  // Animation interpolations
+  const waveTranslateY = waveAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -4],
+  });
+
+  const waveOpacity = waveAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.3, 0.8, 0.3],
+  });
+
+  const glowScale = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.1],
+  });
+
+  const glowOpacity = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.1, 0.3],
+  });
+
+  return (
+    <Animated.View 
+      style={{
+        backgroundColor: COLORS.backgroundLight,
+        paddingHorizontal: 24, 
+        paddingTop: 28, 
+        paddingBottom: 28,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.borderLight,
+        transform: [
+          { translateY: slideAnim },
+          { scale: scaleAnim }
+        ],
+        opacity: fadeAnim,
+        overflow: 'hidden',
+        position: 'relative',
+      }}
+    >
+      {/* Animated Background Elements */}
+      <Animated.View 
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '100%',
+          opacity: glowOpacity,
+          transform: [{ scale: glowScale }],
+        }}
+      >
+        <LinearGradient
+          colors={['rgba(37, 99, 235, 0.05)', 'rgba(59, 130, 246, 0.02)', 'transparent']}
+          style={{ flex: 1 }}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+      </Animated.View>
+
+      {/* Floating Particles */}
+      {[1, 2, 3].map((i) => (
+        <Animated.View
+          key={i}
+          style={{
+            position: 'absolute',
+            width: 4,
+            height: 4,
+            borderRadius: 2,
+            backgroundColor: COLORS.primaryLight,
+            top: 20 + i * 20,
+            left: 30 + i * 80,
+            opacity: waveOpacity,
+            transform: [
+              { translateY: waveTranslateY },
+              { scale: waveAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [1, 1.5]
+              })}
+            ],
+          }}
+        />
+      ))}
+
+      {/* Main Content */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <Text style={{ 
+              fontFamily: 'System', 
+              fontWeight: '700', 
+              fontSize: 32, 
+              color: COLORS.textPrimary,
+              letterSpacing: -0.5,
+            }}>
+              Good Morning, 
+            </Text>
+            <Animated.View
+              style={{
+                marginLeft: 8,
+                transform: [{ translateY: waveTranslateY }],
+                opacity: waveOpacity,
+              }}
+            >
+              <Text style={{ 
+                fontFamily: 'System', 
+                fontWeight: '700', 
+                fontSize: 32, 
+                color: COLORS.primary,
+                letterSpacing: -0.5,
+              }}>
+                👋
+              </Text>
+            </Animated.View>
+          </View>
+          
+          <Text style={{ 
+            fontFamily: 'System', 
+            fontWeight: '800', 
+            fontSize: 40, 
+            color: COLORS.textPrimary,
+            marginBottom: 4,
+            lineHeight: 44,
+            letterSpacing: -0.5,
+          }}>
+            Siddhi!
+          </Text>
+          
+          <Animated.View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginTop: 4,
+              opacity: fadeAnim,
+              transform: [{
+                translateX: slideAnim.interpolate({
+                  inputRange: [0, 50],
+                  outputRange: [0, -20],
+                })
+              }]
+            }}
           >
-            <View style={styles.summaryContent}>
-              <View>
-                <Text style={styles.summaryTitle}>
-                  Report Issue
-                </Text>
-                <Text style={styles.summarySubtitle}>
-                  Submit new complaint
-                </Text>
-              </View>
-              <View style={[styles.summaryIcon, styles.summaryIcon3D]}>
-                <Icon name="alert-circle" size={24} color="#FFFFFF" />
-              </View>
-            </View>
+            <Animated.View style={{
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: COLORS.primary,
+              marginRight: 8,
+              transform: [{
+                scale: waveAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 1.5]
+                })
+              }]
+            }} />
+            <Text style={{ 
+              fontFamily: 'System', 
+              fontSize: 16, 
+              color: COLORS.textSecondary,
+              lineHeight: 24,
+            }}>
+              Here's what's happening with your reports today
+            </Text>
           </Animated.View>
-        </TouchableOpacity>
+        </View>
+
+        {/* Enhanced Profile Avatar */}
+        <AnimatedPressable
+          onPressIn={() => setIsPressed(true)}
+          onPressOut={() => setIsPressed(false)}
+          style={({ pressed }) => ({
+            width: 60,
+            height: 60,
+            borderRadius: 20,
+            backgroundColor: COLORS.cardBackground,
+            borderWidth: 2,
+            borderColor: COLORS.primaryLight,
+            alignItems: 'center',
+            justifyContent: 'center',
+            shadowColor: COLORS.primary,
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.25,
+            shadowRadius: 12,
+            elevation: 8,
+            transform: [
+              { scale: pressed ? 0.95 : isPressed ? 0.98 : 1 },
+              { 
+                rotate: waveAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0deg', '5deg']
+                }) 
+              }
+            ]
+          })}
+        >
+          <LinearGradient
+            colors={COLORS.gradientPrimary}
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 16,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Text style={{
+              fontFamily: 'System',
+              fontWeight: '800',
+              fontSize: 22,
+              color: COLORS.textLight,
+            }}>
+              S
+            </Text>
+          </LinearGradient>
+          
+          {/* Active Status Indicator */}
+          <Animated.View 
+            style={{
+              position: 'absolute',
+              top: 2,
+              right: 2,
+              width: 14,
+              height: 14,
+              borderRadius: 7,
+              backgroundColor: COLORS.success,
+              borderWidth: 2,
+              borderColor: COLORS.cardBackground,
+              shadowColor: COLORS.success,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.5,
+              shadowRadius: 4,
+              transform: [{
+                scale: waveAnim.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [1, 1.3, 1]
+                })
+              }]
+            }}
+          />
+        </AnimatedPressable>
       </View>
-    </View>
+
+      {/* Quick Stats Row */}
+      <Animated.View 
+        style={{
+          flexDirection: 'row',
+          marginTop: 28,
+          opacity: fadeAnim,
+          transform: [{
+            translateY: slideAnim.interpolate({
+              inputRange: [0, 50],
+              outputRange: [0, 20],
+            })
+          }]
+        }}
+      >
+        {[
+          { label: 'Today', value: '3', color: COLORS.primary, icon: '📊' },
+          { label: 'This Week', value: '12', color: COLORS.success, icon: '📈' },
+          { label: 'Rating', value: '4.8', color: COLORS.warning, icon: '⭐' },
+        ].map((stat, index) => (
+          <Animated.View
+            key={stat.label}
+            style={{
+              flex: 1,
+              backgroundColor: COLORS.cardBackground,
+              borderRadius: 16,
+              padding: 16,
+              marginRight: index < 2 ? 12 : 0,
+              borderWidth: 1,
+              borderColor: COLORS.borderLight,
+              shadowColor: COLORS.shadow,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.1,
+              shadowRadius: 8,
+              elevation: 4,
+              transform: [{
+                translateY: waveAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, index % 2 === 0 ? -3 : 3]
+                })
+              }]
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Text style={{ fontSize: 20, marginRight: 2 }}>{stat.icon}</Text>
+              <Text style={{
+                fontSize: 10,
+                fontWeight: '500',
+                color: COLORS.textSecondary,
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+              }}>
+                {stat.label}
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+              <Text style={{
+                fontSize: 24,
+                fontWeight: '800',
+                color: stat.color,
+                marginRight: 4,
+              }}>
+                {stat.value}
+              </Text>
+              {stat.label === 'Rating' && (
+                <Text style={{
+                  fontSize: 14,
+                  color: COLORS.textMuted,
+                }}>
+                  /5
+                </Text>
+              )}
+            </View>
+          </Animated.View>
+        ))}
+      </Animated.View>
+    </Animated.View>
+  );
+}
+
+// ==================== Enhanced CitizenTrustScoreCard Component ====================
+const EnhancedCitizenTrustScoreCard = ({ score = 89, totalIssues = 156, resolvedIssues = 128 }) => {
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
+
+  const citizenScoreColor = score >= 80 ? COLORS.gradientSuccess :
+    score >= 60 ? COLORS.gradientWarning : COLORS.gradientDanger;
+
+  useEffect(() => {
+    // Create the loop animation
+    const glowLoopAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    // Start parallel animations
+    Animated.parallel([
+      Animated.timing(progressAnim, {
+        toValue: score,
+        duration: 1500,
+        useNativeDriver: false,
+        easing: Easing.out(Easing.cubic),
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Start the loop animation
+    glowLoopAnimation.start();
+
+    // Cleanup
+    return () => {
+      glowLoopAnimation.stop();
+    };
+  }, []);
+
+  const glowOpacity = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.1, 0.3],
+  });
+
+  return (
+    <Animated.View 
+      style={{
+        marginBottom: 24,
+        shadowColor: COLORS.primary,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.2,
+        shadowRadius: 16,
+        elevation: 8,
+        transform: [{ scale: scaleAnim }],
+      }}
+    >
+      <LinearGradient 
+        colors={COLORS.gradientPrimary}
+        style={{
+          borderRadius: 20,
+          padding: 28,
+          alignItems: 'center',
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.2)',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+      >
+        {/* Glow Effect */}
+        <Animated.View
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            opacity: glowOpacity,
+          }}
+        />
+
+        <Text style={{
+          fontSize: 18,
+          fontWeight: '700',
+          color: 'rgba(255, 255, 255, 0.95)',
+          marginBottom: 16,
+          textAlign: 'center',
+          letterSpacing: 0.5,
+        }}>
+          Citizen Trust Score
+        </Text>
+        
+        <Animated.Text 
+          style={{
+            fontSize: 56,
+            fontWeight: '900',
+            color: '#FFFFFF',
+            marginBottom: 8,
+            textShadowColor: 'rgba(0, 0, 0, 0.2)',
+            textShadowOffset: { width: 0, height: 4 },
+            textShadowRadius: 8,
+            transform: [{
+              scale: scaleAnim.interpolate({
+                inputRange: [0.9, 1],
+                outputRange: [0.9, 1]
+              })
+            }]
+          }}
+        >
+          {score}
+        </Animated.Text>
+        
+        <Text style={{
+          fontSize: 15,
+          fontWeight: '500',
+          color: 'rgba(255, 255, 255, 0.85)',
+          textAlign: 'center',
+          marginBottom: 24,
+          paddingHorizontal: 20,
+          lineHeight: 22,
+        }}>
+          Excellent reputation based on {totalIssues} issues with {resolvedIssues} resolved
+        </Text>
+        
+        <View style={{
+          width: '100%',
+          height: 12,
+          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+          borderRadius: 6,
+          overflow: 'hidden',
+          marginBottom: 16,
+        }}>
+          <Animated.View
+            style={{
+              width: progressAnim.interpolate({
+                inputRange: [0, 100],
+                outputRange: ['0%', '100%']
+              }),
+              height: '100%',
+              borderRadius: 6,
+            }}
+          >
+            <LinearGradient
+              colors={citizenScoreColor}
+              style={{ flex: 1 }}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            />
+          </Animated.View>
+        </View>
+        
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+          <Text style={{
+            fontSize: 12,
+            color: 'rgba(255, 255, 255, 0.7)',
+          }}>
+            Needs Improvement
+          </Text>
+          <Text style={{
+            fontSize: 12,
+            color: 'rgba(255, 255, 255, 0.7)',
+          }}>
+            Excellent
+          </Text>
+        </View>
+      </LinearGradient>
+    </Animated.View>
   );
 };
 
+// ==================== Enhanced BottomNav Component ====================
+function EnhancedBottomNav() {
+  const [activeTab, setActiveTab] = useState('home');
+  const slideAnim = useRef(new Animated.Value(100)).current;
+
+  useEffect(() => {
+    Animated.spring(slideAnim, {
+      toValue: 0,
+      tension: 50,
+      friction: 10,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  return (
+    <Animated.View 
+      style={{
+        position: 'absolute',
+        bottom: 24,
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+        transform: [{ translateY: slideAnim }],
+      }}
+    >
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: COLORS.cardBackground,
+        gap: 4,
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 24,
+        shadowColor: COLORS.shadowDark,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.25,
+        shadowRadius: 20,
+        elevation: 12,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+      }}>
+        {navItems.map((item) => {
+          const isActive = activeTab === item.id;
+          const Icon = item.icon;
+
+          return (
+            <Pressable
+              key={item.id}
+              onPress={() => setActiveTab(item.id)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                backgroundColor: isActive ? COLORS.primary : 'transparent',
+                paddingHorizontal: isActive ? 20 : 16,
+                paddingVertical: isActive ? 12 : 8,
+                borderRadius: 20,
+                minWidth: isActive ? 100 : 48,
+                height: 48,
+                position: 'relative',
+              }}
+            >
+              {isActive && (
+                <Animated.View
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: COLORS.primary,
+                    borderRadius: 20,
+                    opacity: 0.1,
+                  }}
+                />
+              )}
+              
+              <Icon
+                size={22}
+                color={isActive ? COLORS.textLight : COLORS.textSecondary}
+              />
+              {isActive && (
+                <Text style={{
+                  fontSize: 15,
+                  fontWeight: '600',
+                  color: COLORS.textLight,
+                  lineHeight: 20,
+                }}>
+                  {item.label}
+                </Text>
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
+    </Animated.View>
+  );
+}
+
+// ==================== Enhanced UpdateCard Component ====================
+interface EnhancedUpdateCardProps {
+  message: string;
+  index: number;
+}
+
+function EnhancedUpdateCard({ message, index }: EnhancedUpdateCardProps) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.delay(index * 200),
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.cubic),
+        }),
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          tension: 60,
+          friction: 8,
+          useNativeDriver: true,
+        })
+      ])
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={{
+        opacity: fadeAnim,
+        transform: [{ translateY: slideAnim }],
+      }}
+    >
+      <Pressable
+        style={({ pressed }) => ({
+          paddingHorizontal: 24,
+          paddingVertical: 20,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 20,
+          backgroundColor: COLORS.cardBackground,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: COLORS.border,
+          shadowColor: COLORS.shadow,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.1,
+          shadowRadius: 12,
+          elevation: 4,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
+        })}
+      >
+        <LinearGradient
+          colors={COLORS.gradientPrimary}
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 14,
+            alignItems: 'center',
+            justifyContent: 'center',
+            shadowColor: COLORS.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.2,
+            shadowRadius: 8,
+            elevation: 4,
+          }}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Bell size={20} color={COLORS.textLight} />
+        </LinearGradient>
+        <Text style={{
+          fontFamily: 'System',
+          fontSize: 15,
+          fontWeight: '500',
+          color: COLORS.textPrimary,
+          flex: 1,
+          lineHeight: 22,
+        }}>
+          {message}
+        </Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+// ==================== Enhanced HomeScreen Component ====================
+export default function HomeScreen() {
+  const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const scrollViewRef = useRef<ScrollView>(null);
+  const contentOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(contentOpacity, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+      easing: Easing.out(Easing.cubic),
+    }).start();
+  }, []);
+
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+    { useNativeDriver: false }
+  );
+
+  const handleScrollEnd = (event: any) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / (CARD_WIDTH + 32));
+    setActiveCardIndex(Math.min(Math.max(index, 0), issuesData.length - 1));
+  };
+
+  const scrollToIndex = (index: number) => {
+    scrollViewRef.current?.scrollTo({
+      x: index * (CARD_WIDTH + 32),
+      animated: true,
+    });
+    setActiveCardIndex(index);
+  };
+
+  return (
+    <Animated.View style={{ flex: 1, backgroundColor: COLORS.background, opacity: contentOpacity }}>
+      <EnhancedHeader />
+
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 140 }}
+      >
+        {/* Enhanced Greeting Section */}
+        <EnhancedGreetingSection />
+
+        {/* Stats Cards Section */}
+        <View style={{ paddingHorizontal: 24, marginBottom: 32, marginTop: 16 }}>
+          <Text style={{ 
+            fontFamily: 'System', 
+            fontWeight: '500', 
+            fontSize: 18, 
+            color: COLORS.textPrimary,
+            marginBottom: 20,
+            letterSpacing: -0.3,
+          }}>
+            Overview Dashboard
+          </Text>
+          <View style={{ 
+            flexDirection: 'row', 
+            justifyContent: 'space-between',
+            marginBottom: 16,
+            gap: 16,
+          }}>
+            {[
+              { title: "Total Issues", value: "156" },
+              { title: "Resolved", value: "128" },
+              { title: "Pending", value: "28" },
+            ].map((stat, index) => (
+              <View key={stat.title} style={{ flex: 1 }}>
+                <EnhancedStatsCard 
+                  title={stat.title}
+                  value={stat.value}
+                  index={index}
+                />
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Enhanced Citizen Trust Score Card */}
+        <View style={{ paddingHorizontal: 24, marginBottom: 32 }}>
+          <EnhancedCitizenTrustScoreCard 
+            score={89}
+            totalIssues={156}
+            resolvedIssues={128}
+          />
+        </View>
+
+        {/* Removed Quick Overview Section - Completely removed */}
+
+        {/* Reported Issues Section */}
+        <View style={{ marginBottom: 40 }}>
+          <View style={{ 
+            flexDirection: 'row', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            paddingHorizontal: 24,
+            marginBottom: 20,
+          }}>
+            <Text style={{ 
+              fontFamily: 'System', 
+              fontWeight: '700', 
+              fontSize: 22, 
+              color: COLORS.textPrimary,
+              letterSpacing: -0.3,
+            }}>
+              Recent Reports
+            </Text>
+            <Pressable style={({ pressed }) => ({
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              backgroundColor: pressed ? COLORS.primaryDark : COLORS.primary,
+              borderRadius: 12,
+              transform: [{ scale: pressed ? 0.95 : 1 }],
+            })}>
+              <Text style={{ 
+                fontFamily: 'System', 
+                fontWeight: '600', 
+                fontSize: 14, 
+                color: COLORS.textLight,
+              }}>
+                View All Reports →
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* Carousel */}
+          <View>
+            <ScrollView
+              ref={scrollViewRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              pagingEnabled
+              snapToInterval={CARD_WIDTH + 32}
+              snapToAlignment="center"
+              decelerationRate="fast"
+              onScroll={handleScroll}
+              onMomentumScrollEnd={handleScrollEnd}
+              contentContainerStyle={{
+                paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2,
+                paddingVertical: 16,
+              }}
+              style={{ marginHorizontal: -24 }}
+            >
+              {issuesData.map((issue, index) => (
+                <View key={index} style={{ marginRight: 32 }}>
+                  <IssueCard
+                    {...issue}
+                    index={index}
+                    scrollX={scrollX}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+
+            {/* Enhanced Carousel Controls */}
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginTop: 24,
+              gap: 16,
+            }}>
+              <Pressable
+                onPress={() => {
+                  if (activeCardIndex > 0) {
+                    scrollToIndex(activeCardIndex - 1);
+                  }
+                }}
+                style={({ pressed }) => ({
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: COLORS.cardBackground,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 1,
+                  borderColor: COLORS.border,
+                  shadowColor: COLORS.shadowDark,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 8,
+                  elevation: 4,
+                  opacity: activeCardIndex === 0 ? 0.5 : 1,
+                  transform: [{ scale: pressed ? 0.9 : 1 }],
+                })}
+                disabled={activeCardIndex === 0}
+              >
+                <LinearGradient
+                  colors={activeCardIndex === 0 ? 
+                    [COLORS.textMuted, COLORS.textMuted] : 
+                    COLORS.gradientPrimary}
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Text style={{
+                    color: COLORS.textLight,
+                    fontSize: 18,
+                    fontWeight: '700',
+                    marginLeft: -1,
+                  }}>‹</Text>
+                </LinearGradient>
+              </Pressable>
+
+              {/* Enhanced Dots */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {issuesData.map((_, index) => (
+                  <Pressable
+                    key={index}
+                    onPress={() => scrollToIndex(index)}
+                  >
+                    <View
+                      style={{
+                        width: activeCardIndex === index ? 28 : 8,
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: activeCardIndex === index ? COLORS.primary : COLORS.border,
+                      }}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+
+              <Pressable
+                onPress={() => {
+                  if (activeCardIndex < issuesData.length - 1) {
+                    scrollToIndex(activeCardIndex + 1);
+                  }
+                }}
+                style={({ pressed }) => ({
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: COLORS.cardBackground,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 1,
+                  borderColor: COLORS.border,
+                  shadowColor: COLORS.shadowDark,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 8,
+                  elevation: 4,
+                  opacity: activeCardIndex === issuesData.length - 1 ? 0.5 : 1,
+                  transform: [{ scale: pressed ? 0.9 : 1 }],
+                })}
+                disabled={activeCardIndex === issuesData.length - 1}
+              >
+                <LinearGradient
+                  colors={activeCardIndex === issuesData.length - 1 ? 
+                    [COLORS.textMuted, COLORS.textMuted] : 
+                    COLORS.gradientPrimary}
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Text style={{
+                    color: COLORS.textLight,
+                    fontSize: 18,
+                    fontWeight: '700',
+                    marginLeft: 1,
+                  }}>›</Text>
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+
+        {/* Updates Section */}
+        <View style={{ paddingHorizontal: 24, marginBottom: 32 }}>
+          <Text style={{ 
+            fontFamily: 'System', 
+            fontWeight: '700', 
+            fontSize: 22, 
+            color: COLORS.textPrimary,
+            marginBottom: 20,
+            letterSpacing: -0.3,
+          }}>
+            Recent Updates
+          </Text>
+          <View style={{ gap: 16 }}>
+            {updatesData.map((update, index) => (
+              <EnhancedUpdateCard key={index} message={update} index={index} />
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+
+      <EnhancedBottomNav />
+    </Animated.View>
+  );
+}
+
+// ==================== IssueCard Component ====================
+interface IssueCardProps {
+  icon: string;
+  title: string;
+  location: string;
+  status: 'Pending' | 'In Progress' | 'Resolved';
+  urgency: 'URGENCY' | 'MEDIUM' | 'LOW';
+  distance: string;
+  index: number;
+  scrollX: Animated.Value;
+}
+
+const IssueCard: React.FC<IssueCardProps> = ({
+  icon,
+  title,
+  location,
+  status,
+  urgency,
+  distance,
+  index,
+  scrollX,
+}) => {
+  const inputRange = [
+    (index - 1) * (CARD_WIDTH + 32),
+    index * (CARD_WIDTH + 32),
+    (index + 1) * (CARD_WIDTH + 32),
+  ];
+
+  const scale = scrollX.interpolate({
+    inputRange,
+    outputRange: [0.9, 1.1, 0.9],
+    extrapolate: 'clamp',
+  });
+
+  const opacity = scrollX.interpolate({
+    inputRange,
+    outputRange: [0.7, 1, 0.7],
+    extrapolate: 'clamp',
+  });
+
+  const translateY = scrollX.interpolate({
+    inputRange,
+    outputRange: [20, 0, 20],
+    extrapolate: 'clamp',
+  });
+
+  const shadowOpacity = scrollX.interpolate({
+    inputRange,
+    outputRange: [0.1, 0.3, 0.1],
+    extrapolate: 'clamp',
+  });
+
+  const urgencyStyles = {
+    URGENCY: {
+      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+      borderColor: '#FECACA',
+      color: '#DC2626',
+    },
+    MEDIUM: {
+      backgroundColor: 'rgba(245, 158, 11, 0.1)',
+      borderColor: '#FDE68A',
+      color: '#D97706',
+    },
+    LOW: {
+      backgroundColor: 'rgba(16, 185, 129, 0.1)',
+      borderColor: '#A7F3D0',
+      color: '#059669',
+    },
+  };
+
+  const statusStyles = {
+    Pending: {
+      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+      borderColor: '#FECACA',
+      color: '#DC2626',
+    },
+    'In Progress': {
+      backgroundColor: 'rgba(245, 158, 11, 0.1)',
+      borderColor: '#FDE68A',
+      color: '#D97706',
+    },
+    Resolved: {
+      backgroundColor: 'rgba(16, 185, 129, 0.1)',
+      borderColor: '#A7F3D0',
+      color: '#059669',
+    },
+  };
+
+  const getFormalIcon = (icon: string) => {
+    const iconMap: Record<string, string> = {
+      '🗑️': '🗑️',
+      '💧': '💧',
+      '🛣️': '🛣️',
+      '💡': '💡',
+    };
+    return iconMap[icon] || icon;
+  };
+
+  return (
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          transform: [{ scale }, { translateY }],
+          opacity,
+          shadowOpacity,
+          marginHorizontal: 12,
+          shadowColor: COLORS.shadowDark,
+          shadowOffset: { width: 0, height: 8 },
+          shadowRadius: 16,
+          elevation: 8,
+        },
+      ]}
+    >
+      <View style={[styles.gradient, {
+        backgroundColor: COLORS.cardBackground,
+      }]} />
+
+      <View style={[styles.contentContainer, { paddingBottom: 28 }]}>
+        <View style={[styles.iconContainer, {
+          backgroundColor: 'rgba(37, 99, 235, 0.08)',
+          borderColor: 'rgba(37, 99, 235, 0.15)',
+          width: 64,
+          height: 64,
+          marginBottom: 16,
+        }]}>
+          <Text style={[styles.icon, { 
+            color: COLORS.primary,
+            fontSize: 28,
+          }]}>{getFormalIcon(icon)}</Text>
+        </View>
+
+        <View style={[styles.textContainer, { marginBottom: 12 }]}>
+          <Text style={[styles.title, { 
+            color: COLORS.textPrimary,
+            fontSize: 15,
+            marginBottom: 4,
+            fontWeight: '700',
+          }]}>{title}</Text>
+          <Text style={[styles.location, { 
+            color: COLORS.textSecondary,
+            fontSize: 11,
+          }]}>{location}</Text>
+        </View>
+
+        <View style={[styles.badgesContainer, { marginBottom: 16 }]}>
+          <View
+            style={[
+              styles.badge,
+              {
+                backgroundColor: urgencyStyles[urgency].backgroundColor,
+                borderColor: urgencyStyles[urgency].borderColor,
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+              },
+            ]}
+          >
+            <Text style={[styles.badgeText, { 
+              color: urgencyStyles[urgency].color,
+              fontSize: 10,
+              fontWeight: '700',
+            }]}>
+              {urgency === 'URGENCY' ? 'HIGH' : urgency}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.badge,
+              {
+                backgroundColor: statusStyles[status].backgroundColor,
+                borderColor: statusStyles[status].borderColor,
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+              },
+            ]}
+          >
+            <Text style={[styles.badgeText, { 
+              color: statusStyles[status].color,
+              fontSize: 10,
+              fontWeight: '700',
+            }]}>
+              {status}
+            </Text>
+          </View>
+        </View>
+
+        <View style={[styles.distanceContainer, { marginTop: 4 }]}>
+          <Text style={[styles.distanceText, { 
+            color: COLORS.textMuted,
+            fontSize: 12,
+            fontWeight: '600',
+          }]}>{distance}</Text>
+        </View>
+      </View>
+    </Animated.View>
+  );
+};
+
+// ==================== StyleSheet Definitions ====================
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#F5F1E8',
-  },
-  backgroundGlow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(212, 185, 150, 0.1)',
-  },
-  header: {
-    paddingTop: 48,
-    paddingHorizontal: 24,
-    paddingBottom: 16,
-    position: 'relative',
-    zIndex: 10,
-  },
-  headerTitle: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    color: '#333333',
-  },
-  headerSubtitle: {
-    fontSize: 18,
-    color: '#666666',
-    marginTop: 4,
-  },
-  cardsContainer: {
-    marginTop: 24,
-    flex: 1,
-    position: 'relative',
-    zIndex: 10,
-  },
-  dotsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 24,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginHorizontal: 4,
-  },
-  activeDot: {
-    width: 16,
-    backgroundColor: '#D4B996',
-  },
-  inactiveDot: {
-    backgroundColor: '#D1D5DB',
-  },
-  quickReportContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-    position: 'relative',
-    zIndex: 10,
-  },
-  quickReportTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333333',
-    marginBottom: 16,
-  },
-  quickReportButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  quickReportButtonWrapper: {
-    position: 'relative',
-  },
-  quickReportButton: {
-    width: 88,
-    height: 88,
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT + 20,
     borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickButtonGlow: {
-    shadowColor: '#B08D57',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  quickIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickIcon3D: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowColor: COLORS.shadow,
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowRadius: 16,
     elevation: 6,
-  },
-  quickButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 13,
-    marginTop: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  summaryContainer: {
-    marginTop: 32,
-    marginHorizontal: 24,
-    marginBottom: 112,
-    position: 'relative',
-    zIndex: 10,
-  },
-  summaryButtonWrapper: {
-    position: 'relative',
-  },
-  summaryCard: {
-    backgroundColor: '#E6E6FA',
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  summaryCardGlow: {
-    shadowColor: '#A78BFA',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  summaryContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  summaryTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  summarySubtitle: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 14,
-    marginTop: 4,
-  },
-  summaryIcon: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 12,
-    borderRadius: 20,
-  },
-  summaryIcon3D: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  // Card styles
-  card: {
-    width: width * 0.8,
-    height: 380,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 24,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  cardGlow: {
-    shadowColor: '#FFFFFF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 15,
+  gradient: {
+    ...StyleSheet.absoluteFillObject,
   },
-  tanGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: '25%',
-    backgroundColor: '#D4B996',
-    opacity: 0.3,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  cardContent: {
-    padding: 24,
-    position: 'relative',
-    zIndex: 10,
+  contentContainer: {
+    flex: 1,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   iconContainer: {
     alignItems: 'center',
-    marginBottom: 16,
-  },
-  icon3DContainer: {
-    width: 84,
-    height: 84,
-    borderRadius: 21,
-    alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-  },
-  iconInnerGlow: {
-    width: 70,
-    height: 70,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginBottom: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  cardLocation: {
-    color: 'rgba(255, 255, 255, 0.95)',
-    fontSize: 16,
-    marginLeft: 8,
-    fontWeight: '500',
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  urgencyBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  urgencyText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  distanceText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  flipHintContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-  },
-  flipHint: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 14,
-    marginRight: 4,
-  },
-  smallIcon3D: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    shadowColor: 'rgba(0, 0, 0, 0.05)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
     elevation: 4,
   },
-  statusContainer: {
+  icon: {
+    // fontSize set inline
+  },
+  textContainer: {
     alignItems: 'center',
-    marginBottom: 16,
+    width: '100%',
   },
-  statusBadge: {
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 25,
-  },
-  statusText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  cardDescription: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+  title: {
+    fontFamily: 'System',
+    fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 26,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    lineHeight: 20,
   },
-  infoContainer: {
-    marginBottom: 24,
+  location: {
+    textAlign: 'center',
+    lineHeight: 16,
   },
-  infoRow: {
+  badgesContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 12,
+    gap: 8,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  badge: {
+    borderWidth: 1.5,
     borderRadius: 12,
-    marginBottom: 12,
+    minWidth: 65,
+    alignItems: 'center',
   },
-  infoText: {
-    color: 'rgba(255, 255, 255, 0.95)',
-    fontSize: 14,
-    marginLeft: 12,
-    fontWeight: '500',
+  badgeText: {
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
-  flipBackContainer: {
+  distanceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    width: '100%',
+    paddingTop: 4,
   },
-  flipBackHint: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 14,
-    marginLeft: 8,
+  distanceText: {
+    fontWeight: '500',
   },
 });
 
-export default HomeScreen;
+// Data arrays
+const issuesData = [
+  {
+    icon: '🗑️',
+    title: 'Garbage',
+    location: 'Road, Zone 3',
+    status: 'Resolved' as const,
+    urgency: 'MEDIUM' as const,
+    distance: '0.3 KM',
+  },
+  {
+    icon: '💧',
+    title: 'Water Leak',
+    location: 'Maraj, Block A',
+    status: 'Resolved' as const,
+    urgency: 'MEDIUM' as const,
+    distance: '0.3 KM',
+  },
+  {
+    icon: '💧',
+    title: 'Garbage Leakage',
+    location: 'Marei, Block B',
+    status: 'Resolved' as const,
+    urgency: 'MEDIUM' as const,
+    distance: '0.5 KM',
+  },
+  {
+    icon: '🛣️',
+    title: 'Road Damage',
+    location: 'Porkex 7',
+    status: 'Resolved' as const,
+    urgency: 'MEDIUM' as const,
+    distance: '0.1 KM',
+  },
+  {
+    icon: '💡',
+    title: 'Street Light Out',
+    location: 'Locain Road, Block B',
+    status: 'Pending' as const,
+    urgency: 'URGENCY' as const,
+    distance: '0.5 KM',
+  },
+];
+
+const updatesData = [
+  'New report from John D. - Pothole on Oak St.',
+  "Your issue 'Garbage Overflow' has been resolved",
+  'System maintenance scheduled for tomorrow',
+  'New feature: Real-time tracking available',
+];
+
+const navItems = [
+  { id: 'home', icon: Home, label: 'Home' },
+  { id: 'report', icon: FileEdit, label: 'Report' },
+  { id: 'issues', icon: ClipboardList, label: 'Issues' },
+  { id: 'profile1', icon: User, label: 'Profile' },
+];

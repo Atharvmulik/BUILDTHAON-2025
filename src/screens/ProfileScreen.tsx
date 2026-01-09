@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { API_BASE } from "../config/api";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -86,8 +88,8 @@ const createMockNavigation = () => ({
   canGoBack: () => true,
   isFocused: () => true,
   getId: () => 'mock-navigation-id',
-  getState: () => ({ 
-    routes: [{ name: 'Profile' }], 
+  getState: () => ({
+    routes: [{ name: 'Profile' }],
     index: 0,
     key: 'mock-state-key',
     routeNames: ['Profile'],
@@ -265,14 +267,15 @@ interface UserProfilePageProps {
   route?: any;
 }
 
-const UserProfilePage: React.FC<UserProfilePageProps> = ({ 
-  navigation = createMockNavigation(), 
-  route = createMockRoute() 
+const UserProfilePage: React.FC<UserProfilePageProps> = ({
+  navigation = createMockNavigation(),
+  route = createMockRoute()
 }) => {
   const nav = navigation;
   const rt = route;
-  
+
   const [user, setUser] = useState(MOCK_USER);
+  const [token, setToken] = useState<string | null>(null);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -281,24 +284,44 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
   });
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Load user data on mount
   useEffect(() => {
-    loadUserProfile();
+    const loadTokenAndProfile = async () => {
+      const storedToken = await AsyncStorage.getItem("access_token");
+
+      if (!storedToken) {
+        Alert.alert("Session expired", "Please login again");
+        nav.reset({
+          index: 0,
+          routes: [{ name: "Login" }],
+        });
+        return;
+      }
+
+      setToken(storedToken);
+      loadUserProfile(storedToken);
+    };
+
+    loadTokenAndProfile();
   }, []);
 
-  const loadUserProfile = async () => {
-    setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setUser(MOCK_USER);
-      setIsLoading(false);
-    }, 800);
+
+  const loadUserProfile = async (jwtToken: string) => {
+    const res = await fetch(`${API_BASE}/users/profile`, {
+      headers: {
+        Authorization: `Bearer ${jwtToken}`,
+      },
+    });
+
+    const data = await res.json();
+    setUser(data);
   };
+
+
 
   const pickImage = async () => {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
+
       if (!permissionResult.granted) {
         Alert.alert('Permission Required', 'Please allow access to your photo library to select an image.');
         return;
@@ -333,20 +356,29 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
     setModalVisible(true);
   };
 
-  const handleSaveProfile = () => {
-    // Simulate API update
+  const handleSaveProfile = async () => {
+    if (!token) return;
+
     setIsLoading(true);
-    setTimeout(() => {
-      setUser({
-        ...user,
-        fullName: editForm.fullName,
-        mobileNumber: editForm.mobileNumber,
-      });
-      setIsLoading(false);
-      setModalVisible(false);
-      showToast('Profile updated successfully!');
-    }, 800);
+
+    await fetch(`${API_BASE}/users/profile`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        full_name: editForm.fullName,
+        mobile_number: editForm.mobileNumber,
+      }),
+    });
+
+    setIsLoading(false);
+    setModalVisible(false);
+    showToast("Profile updated successfully!");
   };
+
+
 
   const handleLogout = () => {
     Alert.alert(
@@ -466,7 +498,7 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
               </View>
               <Text style={styles.cardTitle}>Personal Information</Text>
             </View>
-            
+
             <View style={styles.infoList}>
               <InfoRow
                 icon={Mail}

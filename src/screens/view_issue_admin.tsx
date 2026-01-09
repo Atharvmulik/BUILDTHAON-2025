@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { API_BASE } from '../config/api';
 import {
   View,
   Text,
@@ -70,33 +71,44 @@ const IssueTrackingPage: React.FC = () => {
   const tabs = ['Pending', 'In Progress', 'Resolved'];
   const statusOptions = ['Pending', 'In Progress', 'Resolved'];
 
+  const [adminStats, setAdminStats] = useState({
+    total_issues: 0,
+    resolved_issues: 0,
+    pending_issues: 0,
+    last_updated: '',
+  });
   const stats: StatCard[] = [
-    { 
-      title: "Total Issues", 
-      value: issues.length, 
-      change: "+12%", 
-      icon: "task-alt", 
-      color: ['#667EEA', '#764BA2'] as const 
+    {
+      title: "Total Issues",
+      value: adminStats.total_issues,
+      change: "",
+      icon: "task-alt",
+      color: ['#667EEA', '#764BA2'] as const,
     },
-    { 
-      title: "Resolved", 
-      value: issues.filter(i => i.status === 'Resolved').length, 
-      change: "+20%", 
-      icon: "verified", 
-      color: ['#00E5A0', '#00D9F5'] as const 
+    {
+      title: "Resolved",
+      value: adminStats.resolved_issues,
+      change: "",
+      icon: "verified",
+      color: ['#00E5A0', '#00D9F5'] as const,
     },
-    { 
-      title: "Pending", 
-      value: issues.filter(i => i.status === 'Pending').length, 
-      change: "-5%", 
-      icon: "pending-actions", 
-      color: ['#FFB74D', '#FF9800'] as const 
+    {
+      title: "Pending",
+      value: adminStats.pending_issues,
+      change: "",
+      icon: "pending-actions",
+      color: ['#FFB74D', '#FF9800'] as const,
     },
   ];
+
 
   useEffect(() => {
     loadIssues();
     startAnimations();
+
+    // Auto-refresh every 15 seconds
+    const interval = setInterval(loadIssues, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -150,115 +162,125 @@ const IssueTrackingPage: React.FC = () => {
     try {
       setIsLoading(true);
       setErrorMessage('');
-      // Replace with actual API call
-      // const data = await ApiService.getAdminIssuesList();
-      // Mock data for demonstration
-      const mockData: AdminIssue[] = [
-        {
-          id: '1',
-          title: 'Pothole on Main Street',
-          description: 'Large pothole causing traffic issues',
-          category: 'Road Maintenance',
-          urgencyLevel: 'High',
-          status: 'Pending',
-          userName: 'John Doe',
-          userEmail: 'john@example.com',
-          userMobile: '+1234567890',
-          locationAddress: '123 Main St, Downtown',
-          createdAt: '2024-01-15T10:30:00Z',
-          updatedAt: '2024-01-15T10:30:00Z',
-        },
-        {
-          id: '2',
-          title: 'Street Light Out',
-          description: 'Street light not working for 3 days',
-          category: 'Electricity',
-          urgencyLevel: 'Medium',
-          status: 'In Progress',
-          userName: 'Jane Smith',
-          userEmail: 'jane@example.com',
-          userMobile: '+1987654321',
-          locationAddress: '456 Oak Ave, Northside',
-          createdAt: '2024-01-14T14:20:00Z',
-          updatedAt: '2024-01-15T09:15:00Z',
-        },
-        {
-          id: '3',
-          title: 'Garbage Overflow',
-          description: 'Trash bins overflowing in park',
-          category: 'Sanitation',
-          urgencyLevel: 'Urgent',
-          status: 'Resolved',
-          userName: 'Bob Wilson',
-          userEmail: 'bob@example.com',
-          userMobile: '+1122334455',
-          locationAddress: '789 Park Rd, East Park',
-          createdAt: '2024-01-13T08:45:00Z',
-          updatedAt: '2024-01-14T16:30:00Z',
-          resolutionNotes: 'Cleared and added extra bins',
-          resolvedBy: 'Sanitation Team',
-        },
-        {
-          id: '4',
-          title: 'Water Pipeline Leak',
-          description: 'Water leaking from main pipeline',
-          category: 'Water',
-          urgencyLevel: 'Urgent',
-          status: 'In Progress',
-          userName: 'Alice Johnson',
-          userEmail: 'alice@example.com',
-          userMobile: '+1555123456',
-          locationAddress: '321 River View, Westside',
-          createdAt: '2024-01-16T08:00:00Z',
-          updatedAt: '2024-01-16T10:30:00Z',
-        },
-      ];
-      setIssues(mockData);
-    } catch (error) {
-      setErrorMessage(`Error loading issues: ${error}`);
+
+      const response = await fetch(`${API_BASE}/admin/issues`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const apiData = await response.json();
+
+      const mappedIssues: AdminIssue[] = apiData.issues.map((issue: any) => ({
+        id: String(issue.id),
+        title: issue.title,
+        description: issue.description,
+        category: issue.category,
+        urgencyLevel: issue.urgency_level || issue.urgencyLevel,
+        status: issue.status,
+        userName: issue.user_name || issue.userName,
+        userEmail: issue.user_email || issue.userEmail,
+        userMobile: issue.user_mobile || issue.userMobile,
+        locationAddress: issue.location_address || issue.locationAddress,
+        createdAt: issue.created_at || issue.createdAt,
+        updatedAt: issue.updated_at || issue.updatedAt,
+        resolutionNotes: issue.resolution_notes || issue.resolutionNotes,
+        resolvedBy: issue.resolved_by || issue.resolvedBy,
+        assignedDepartment: issue.assigned_department || issue.assignedDepartment,
+      }));
+
+      setIssues(mappedIssues);
+    } catch (error: any) {
+      console.error('Error loading issues:', error);
+      setErrorMessage(`Error loading issues: ${error.message || 'Unknown error'}`);
     } finally {
       setIsLoading(false);
       setRefreshing(false);
     }
   };
 
+
+  const loadAdminDashboardStats = async () => {
+    try {
+      console.log("Calling stats API:", `${API_BASE}/admin/dashboard/stats`);
+
+      const res = await fetch(`${API_BASE}/admin/dashboard/stats`);
+      const data = await res.json();
+
+      console.log("Stats response:", data);
+
+      setAdminStats({
+        total_issues: data.total_issues ?? 0,
+        resolved_issues: data.resolved_issues ?? 0,
+        pending_issues: data.pending_issues ?? 0,
+        last_updated: data.last_updated ?? '',
+      });
+    } catch (err) {
+      console.error("Stats API error:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadIssues();
+    loadAdminDashboardStats();
+
+    const interval = setInterval(() => {
+      loadIssues();
+      loadAdminDashboardStats();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+
   const onRefresh = () => {
     setRefreshing(true);
     loadIssues();
   };
+  const normalize = (s: string) =>
+    s.toLowerCase().replace(/[\s_-]/g, '');
 
   const getFilteredIssues = () => {
     const status = tabs[selectedTab].toLowerCase().replace(' ', '');
-    return issues.filter(issue => 
-      issue.status.toLowerCase().replace(' ', '') === status
+    return issues.filter(issue =>
+      normalize(issue.status) === normalize(tabs[selectedTab])
     );
   };
 
   const updateIssueStatus = async (issueId: string, newStatus: string) => {
     try {
-      // Simulate API call
-      // await ApiService.updateIssueStatus(issueId, newStatus);
-      
+      const response = await fetch(
+        `${API_BASE}/admin/issues/${issueId}/status`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to update status: ${response.status}`);
+      }
+
       // Update local state
-      setIssues(prevIssues => 
-        prevIssues.map(issue => 
-          issue.id === issueId 
-            ? { 
-                ...issue, 
-                status: newStatus, 
-                updatedAt: new Date().toISOString(),
-                ...(newStatus === 'Resolved' && issue.status !== 'Resolved' ? {
-                  resolutionNotes: '',
-                  resolvedBy: 'Admin'
-                } : {})
-              }
+      setIssues(prevIssues =>
+        prevIssues.map(issue =>
+          issue.id === issueId
+            ? {
+              ...issue,
+              status: newStatus,
+              updatedAt: new Date().toISOString(),
+              ...(newStatus === 'Resolved' && issue.status !== 'Resolved' ? {
+                resolutionNotes: '',
+                resolvedBy: 'Admin'
+              } : {})
+            }
             : issue
         )
       );
-      
+
       if (selectedIssue?.id === issueId) {
-        setSelectedIssue(prev => prev ? { 
-          ...prev, 
+        setSelectedIssue(prev => prev ? {
+          ...prev,
           status: newStatus,
           ...(newStatus === 'Resolved' && prev.status !== 'Resolved' ? {
             resolutionNotes: '',
@@ -272,13 +294,13 @@ const IssueTrackingPage: React.FC = () => {
           setShowResolveForm(false);
         }
       }
-      
+
       Alert.alert('Success', `Status updated to ${newStatus}`, [
-        { text: 'OK', onPress: () => {} }
+        { text: 'OK', onPress: () => { } }
       ]);
-    } catch (error) {
-      Alert.alert('Error', `Failed to update status: ${error}`, [
-        { text: 'OK', onPress: () => {} }
+    } catch (error: any) {
+      Alert.alert('Error', `Failed to update status: ${error.message || 'Unknown error'}`, [
+        { text: 'OK', onPress: () => { } }
       ]);
     }
   };
@@ -288,50 +310,65 @@ const IssueTrackingPage: React.FC = () => {
       Alert.alert('Error', 'Please enter resolution notes');
       return;
     }
-    
+
     if (!resolvedBy.trim()) {
       Alert.alert('Error', 'Please enter who resolved this issue');
       return;
     }
-    
+
     try {
-      // Simulate API call
-      // await ApiService.resolveIssue(issueId, notes, resolvedBy);
-      
+      const response = await fetch(
+        `${API_BASE}/admin/issues/${issueId}/resolve`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            resolution_notes: notes,
+            resolved_by: resolvedBy,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to resolve issue: ${response.status}`);
+      }
+
       // Update local state
-      setIssues(prevIssues => 
-        prevIssues.map(issue => 
-          issue.id === issueId 
-            ? { 
-                ...issue, 
-                status: 'Resolved',
-                resolutionNotes: notes,
-                resolvedBy: resolvedBy,
-                updatedAt: new Date().toISOString() 
-              }
+      setIssues(prevIssues =>
+        prevIssues.map(issue =>
+          issue.id === issueId
+            ? {
+              ...issue,
+              status: 'Resolved',
+              resolutionNotes: notes,
+              resolvedBy: resolvedBy,
+              updatedAt: new Date().toISOString()
+            }
             : issue
         )
       );
-      
+
       if (selectedIssue?.id === issueId) {
-        setSelectedIssue(prev => prev ? { 
-          ...prev, 
+        setSelectedIssue(prev => prev ? {
+          ...prev,
           status: 'Resolved',
           resolutionNotes: notes,
-          resolvedBy: resolvedBy 
+          resolvedBy: resolvedBy
         } : null);
         setSelectedStatus('Resolved');
       }
-      
+
       Alert.alert('Success', 'Issue resolved successfully', [
-        { text: 'OK', onPress: () => {
-          setModalVisible(false);
-          setResolutionNotes('');
-          setResolvedBy('Admin');
-        }}
+        {
+          text: 'OK', onPress: () => {
+            setModalVisible(false);
+            setResolutionNotes('');
+            setResolvedBy('Admin');
+          }
+        }
       ]);
-    } catch (error) {
-      Alert.alert('Error', `Failed to resolve issue: ${error}`);
+    } catch (error: any) {
+      Alert.alert('Error', `Failed to resolve issue: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -341,21 +378,27 @@ const IssueTrackingPage: React.FC = () => {
       'Are you sure you want to delete this issue? This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
+        {
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
-              // Simulate API call
-              // await ApiService.deleteIssue(issueId);
-              
+              const response = await fetch(
+                `${API_BASE}/admin/issues/${issueId}`,
+                { method: "DELETE" }
+              );
+
+              if (!response.ok) {
+                throw new Error(`Failed to delete issue: ${response.status}`);
+              }
+
               // Update local state
               setIssues(prevIssues => prevIssues.filter(issue => issue.id !== issueId));
-              
+
               Alert.alert('Success', 'Issue deleted successfully');
               setModalVisible(false);
-            } catch (error) {
-              Alert.alert('Error', `Failed to delete issue: ${error}`);
+            } catch (error: any) {
+              Alert.alert('Error', `Failed to delete issue: ${error.message || 'Unknown error'}`);
             }
           }
         },
@@ -447,17 +490,17 @@ const IssueTrackingPage: React.FC = () => {
         outputRange: [0, 1],
       }),
       transform: [
-        { 
+        {
           translateY: slideAnim.interpolate({
             inputRange: [0, 50],
             outputRange: [0, 20],
-          }) 
+          })
         },
-        { 
+        {
           scale: scaleAnim.interpolate({
             inputRange: [0.95, 1],
             outputRange: [0.95, 1],
-          }) 
+          })
         },
       ],
     };
@@ -550,18 +593,18 @@ const IssueTrackingPage: React.FC = () => {
             <Text style={styles.statusSelectorText}>
               Status: {selectedStatus}
             </Text>
-            <Icon 
-              name={showStatusDropdown ? "expand-less" : "expand-more"} 
-              size={24} 
-              color="#FFFFFF" 
+            <Icon
+              name={showStatusDropdown ? "expand-less" : "expand-more"}
+              size={24}
+              color="#FFFFFF"
             />
           </LinearGradient>
         </TouchableOpacity>
 
         {showStatusDropdown && (
-          <Animated.View 
+          <Animated.View
             style={[
-              styles.dropdownMenu, 
+              styles.dropdownMenu,
               { height: dropdownHeight }
             ]}
           >
@@ -613,7 +656,7 @@ const IssueTrackingPage: React.FC = () => {
   const renderResolveForm = () => (
     <View style={styles.resolveForm}>
       <Text style={styles.formTitle}>Resolution Details</Text>
-      
+
       <View style={styles.formGroup}>
         <Text style={styles.formLabel}>Resolution Notes *</Text>
         <TextInput
@@ -855,14 +898,14 @@ const IssueTrackingPage: React.FC = () => {
                   >
                     <Icon name={selectedStatus === 'Resolved' ? "check-circle" : "done-all"} size={20} color="#FFFFFF" />
                     <Text style={styles.buttonText}>
-                      {selectedStatus === 'Resolved' 
+                      {selectedStatus === 'Resolved'
                         ? (showResolveForm ? 'Confirm Resolution' : 'Mark as Resolved')
                         : 'Mark as Resolved'}
                     </Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
-              
+
               <View style={styles.modalSpacer} />
             </ScrollView>
           </Animated.View>

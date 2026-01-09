@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from "expo-router";
+
 import { 
   View, 
   Text, 
@@ -16,7 +18,6 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_WIDTH = 176;
 const CARD_HEIGHT = 224;
 
-// Enhanced formal color palette with elegant gradients
 const COLORS = {
   // Background colors
   background: '#F8FAFC',
@@ -988,106 +989,6 @@ const EnhancedCitizenTrustScoreCard = ({ score = 89, totalIssues = 156, resolved
   );
 };
 
-// ==================== Enhanced BottomNav Component ====================
-function EnhancedBottomNav() {
-  const [activeTab, setActiveTab] = useState('home');
-  const slideAnim = useRef(new Animated.Value(100)).current;
-
-  useEffect(() => {
-    Animated.spring(slideAnim, {
-      toValue: 0,
-      tension: 50,
-      friction: 10,
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
-  return (
-    <Animated.View 
-      style={{
-        position: 'absolute',
-        bottom: 24,
-        left: 0,
-        right: 0,
-        alignItems: 'center',
-        transform: [{ translateY: slideAnim }],
-      }}
-    >
-      <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: COLORS.cardBackground,
-        gap: 4,
-        paddingHorizontal: 20,
-        paddingVertical: 12,
-        borderRadius: 24,
-        shadowColor: COLORS.shadowDark,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.25,
-        shadowRadius: 20,
-        elevation: 12,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-      }}>
-        {navItems.map((item) => {
-          const isActive = activeTab === item.id;
-          const Icon = item.icon;
-
-          return (
-            <Pressable
-              key={item.id}
-              onPress={() => setActiveTab(item.id)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                backgroundColor: isActive ? COLORS.primary : 'transparent',
-                paddingHorizontal: isActive ? 20 : 16,
-                paddingVertical: isActive ? 12 : 8,
-                borderRadius: 20,
-                minWidth: isActive ? 100 : 48,
-                height: 48,
-                position: 'relative',
-              }}
-            >
-              {isActive && (
-                <Animated.View
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: COLORS.primary,
-                    borderRadius: 20,
-                    opacity: 0.1,
-                  }}
-                />
-              )}
-              
-              <Icon
-                size={22}
-                color={isActive ? COLORS.textLight : COLORS.textSecondary}
-              />
-              {isActive && (
-                <Text style={{
-                  fontSize: 15,
-                  fontWeight: '600',
-                  color: COLORS.textLight,
-                  lineHeight: 20,
-                }}>
-                  {item.label}
-                </Text>
-              )}
-            </Pressable>
-          );
-        })}
-      </View>
-    </Animated.View>
-  );
-}
-
 // ==================== Enhanced UpdateCard Component ====================
 interface EnhancedUpdateCardProps {
   message: string;
@@ -1180,6 +1081,7 @@ function EnhancedUpdateCard({ message, index }: EnhancedUpdateCardProps) {
 
 // ==================== Enhanced HomeScreen Component ====================
 export default function HomeScreen() {
+  const router = useRouter();
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
@@ -1480,7 +1382,44 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      <EnhancedBottomNav />
+      {/* FOOTER NAVIGATION */}
+      <View style={styles.footer}>
+        {/* Home */}
+        <Pressable
+          style={styles.footerButton}
+          onPress={() => router.replace("/dashboard")}
+        >
+          <Home size={24} color="#2563EB" />
+          <Text style={styles.footerText}>Home</Text>
+        </Pressable>
+
+        {/* Report Issue */}
+        <Pressable
+          style={styles.footerButton}
+          onPress={() => router.replace("/dashboard/issue_report")}
+        >
+          <FileEdit size={24} color="#2563EB" />
+          <Text style={styles.footerText}>Report</Text>
+        </Pressable>
+
+        {/* My Issues */}
+        <Pressable
+          style={styles.footerButton}
+          onPress={() => router.replace("/dashboard/issues")}
+        >
+          <ClipboardList size={24} color="#2563EB" />
+          <Text style={styles.footerText}>Issues</Text>
+        </Pressable>
+
+        {/* Profile */}
+        <Pressable
+          style={styles.footerButton}
+          onPress={() => router.replace("/dashboard/profile")}
+        >
+          <User size={24} color="#2563EB" />
+          <Text style={styles.footerText}>Profile</Text>
+        </Pressable>
+      </View>
     </Animated.View>
   );
 }
@@ -1762,6 +1701,38 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   distanceText: {
+    fontWeight: '500',
+  },
+  // Footer Navigation Styles
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: COLORS.cardBackground,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingBottom: 24,
+    shadowColor: COLORS.shadowDark,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  footerButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+    flex: 1,
+  },
+  footerText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 4,
     fontWeight: '500',
   },
 });

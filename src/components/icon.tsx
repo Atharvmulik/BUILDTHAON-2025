@@ -91,7 +91,16 @@ export type IconName =
   |'security'
   |'today'
   |'logo-google'
-  |'shield-checkmark';           // Already exists for logout button;           // Already exists for logout button
+  |'shield-checkmark'
+  |'engineering'
+  |'cleaning-services'
+  |'bolt'
+  |'construction'
+  |'trending-down'
+  |'trending-up'
+  |'place'
+  |'access-time'
+  |'account-balance';           // Already exists for logout button;           // Already exists for logout button
 
 interface IconProps {
   name: IconName;

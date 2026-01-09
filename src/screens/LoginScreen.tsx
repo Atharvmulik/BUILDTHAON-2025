@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { IconName } from "../components/icon";
 import { API_BASE } from "../config/api";
+import { useAuth } from "../contexts/AuthContext";
 import {
   View,
   Text,
@@ -35,9 +36,9 @@ interface AuthFormData {
 
 
 const { width } = Dimensions.get('window');
-
 const LoginSignupPage: React.FC<LoginSignupPageProps> = ({ onLoginSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<AuthFormData>({
     email: '',
@@ -171,6 +172,13 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = ({ onLoginSuccess }) => 
 
       const { access_token, is_admin } = data;
 
+      // 🔥 STORE AUTH DATA GLOBALLY
+      await login(
+        access_token,
+        formData.email,   // ← THIS is what admin profile uses
+        is_admin
+      );
+
       if (onLoginSuccess) {
         onLoginSuccess(is_admin);
       }
@@ -181,6 +189,7 @@ const LoginSignupPage: React.FC<LoginSignupPageProps> = ({ onLoginSuccess }) => 
           ? 'Admin login successful! Redirecting to admin dashboard...'
           : 'Welcome to UrbanSim AI! Redirecting to user dashboard...'
       );
+
 
 
       setFormData({ email: '', password: '', name: '', phone: '', confirmPassword: '' });

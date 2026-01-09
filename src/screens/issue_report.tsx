@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { API_BASE } from "../config/api";
 import {
   View,
   Text,
@@ -14,14 +15,14 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import { 
-  LinearGradient 
+import {
+  LinearGradient
 } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import { 
-  ArrowLeft, 
-  HelpCircle, 
+import {
+  ArrowLeft,
+  HelpCircle,
   User,
   ChevronDown,
   CheckCircle,
@@ -57,22 +58,22 @@ const COLORS = {
   background: '#F8FAFC',
   backgroundLight: '#FFFFFF',
   backgroundDark: '#0F172A',
-  
+
   // Card colors
   cardBackground: '#FFFFFF',
   cardBorder: '#E2E8F0',
-  
+
   // Accent colors (refined blue theme)
   primary: '#2563EB',
   primaryLight: '#3B82F6',
   primaryDark: '#1D4ED8',
   primaryGradient: ['#2563EB', '#3B82F6', '#60A5FA'] as const,
-  
+
   // Secondary colors
   secondary: '#7C3AED',
   secondaryLight: '#8B5CF6',
   secondaryDark: '#6D28D9',
-  
+
   // Status colors
   success: '#10B981',
   successLight: '#34D399',
@@ -82,19 +83,19 @@ const COLORS = {
   dangerLight: '#F87171',
   info: '#6366F1',
   infoLight: '#818CF8',
-  
+
   // Text colors
   textPrimary: '#1E293B',
   textSecondary: '#475569',
   textMuted: '#94A3B8',
   textLight: '#F8FAFC',
-  
+
   // UI Elements
   border: '#E2E8F0',
   borderLight: '#F1F5F9',
   shadow: 'rgba(15, 23, 42, 0.08)',
   shadowDark: 'rgba(15, 23, 42, 0.15)',
-  
+
   // Gradient colors
   gradientPrimary: ['#4169E1', '#3B82F6', '#60A5FA'] as const,
   gradientSuccess: ['#10B981', '#34D399'] as const,
@@ -111,8 +112,6 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const AnimatedView = Animated.createAnimatedComponent(View);
 const AnimatedText = Animated.createAnimatedComponent(Text);
-
-// Enhanced Header Component
 
 // Enhanced Header Component
 const EnhancedHeader = ({ onBack, onHelp, onProfile }: any) => {
@@ -170,7 +169,7 @@ const EnhancedHeader = ({ onBack, onHelp, onProfile }: any) => {
   });
 
   return (
-    <Animated.View 
+    <Animated.View
       style={{
         backgroundColor: COLORS.backgroundDark,
         opacity: fadeAnim,
@@ -228,7 +227,7 @@ const EnhancedHeader = ({ onBack, onHelp, onProfile }: any) => {
             opacity: waveOpacity,
             transform: [
               { translateY: waveTranslateY },
-              { 
+              {
                 scale: waveAnim.interpolate({
                   inputRange: [0, 1],
                   outputRange: [1, 1.5]
@@ -322,7 +321,7 @@ const EnhancedHeader = ({ onBack, onHelp, onProfile }: any) => {
           </View>
         </View>
 
-        <Animated.View 
+        <Animated.View
           style={{
             alignItems: 'center',
             paddingVertical: 8,
@@ -335,14 +334,14 @@ const EnhancedHeader = ({ onBack, onHelp, onProfile }: any) => {
             }]
           }}
         >
-          <View style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center', 
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
             marginBottom: 16,
             position: 'relative',
           }}>
             {/* Icon with glow effect */}
-            <Animated.View 
+            <Animated.View
               style={{
                 width: 64,
                 height: 64,
@@ -365,7 +364,7 @@ const EnhancedHeader = ({ onBack, onHelp, onProfile }: any) => {
               }}
             >
               <FileEdit size={32} color={COLORS.textLight} />
-              
+
               {/* Pulsing glow */}
               <Animated.View
                 style={{
@@ -387,10 +386,10 @@ const EnhancedHeader = ({ onBack, onHelp, onProfile }: any) => {
                 }}
               />
             </Animated.View>
-            
+
             <View>
               <Text style={styles.headerTitle}>Report an Issue</Text>
-              <Animated.View 
+              <Animated.View
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -417,9 +416,9 @@ const EnhancedHeader = ({ onBack, onHelp, onProfile }: any) => {
               </Animated.View>
             </View>
           </View>
-          
+
           {/* Status badge */}
-          <Animated.View 
+          <Animated.View
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -452,7 +451,7 @@ const EnhancedHeader = ({ onBack, onHelp, onProfile }: any) => {
           </Animated.View>
 
           {/* Progress indicator line */}
-          <Animated.View 
+          <Animated.View
             style={{
               width: '100%',
               height: 3,
@@ -463,7 +462,7 @@ const EnhancedHeader = ({ onBack, onHelp, onProfile }: any) => {
               overflow: 'hidden',
             }}
           >
-            <Animated.View 
+            <Animated.View
               style={{
                 width: '60%',
                 height: '100%',
@@ -537,11 +536,11 @@ const EnhancedFieldCard = ({ label, children, icon: Icon, index }: any) => {
           )}
           <Text style={styles.enhancedFieldLabel}>{label}</Text>
         </View>
-        
+
         <View style={styles.fieldContent}>
           {children}
         </View>
-        
+
         {/* Animated border bottom */}
         <Animated.View
           style={{
@@ -600,14 +599,14 @@ const EnhancedMenuTile = ({ valueText, onPress, trailing, icon: Icon, badge }: a
             <Icon size={20} color={COLORS.primary} />
           </View>
         )}
-        
+
         <View style={{ flex: 1 }}>
           <Text style={styles.enhancedMenuTileText}>{valueText}</Text>
           {badge && (
             <Text style={styles.menuTileBadge}>{badge}</Text>
           )}
         </View>
-        
+
         {trailing || (
           <View style={styles.chevronContainer}>
             <ChevronDown size={20} color={COLORS.textSecondary} />
@@ -695,7 +694,7 @@ const EnhancedSubmitButton = ({ onPress, disabled, loading }: any) => {
               }
             ]}
           />
-          
+
           <View style={styles.submitButtonContent}>
             {loading ? (
               <Animated.View style={styles.loadingSpinner}>
@@ -708,7 +707,7 @@ const EnhancedSubmitButton = ({ onPress, disabled, loading }: any) => {
               {loading ? 'Submitting...' : 'Submit Report'}
             </Text>
           </View>
-          
+
           {/* Shine effect */}
           <Animated.View
             style={{
@@ -797,7 +796,7 @@ const EnhancedImageUpload = ({ selectedImage, onPickImage, onRemoveImage, upload
         </AnimatedPressable>
       ) : (
         <View style={styles.imagePreviewWrapper}>
-          <Animated.View 
+          <Animated.View
             style={[
               styles.enhancedImagePreview,
               {
@@ -810,7 +809,7 @@ const EnhancedImageUpload = ({ selectedImage, onPickImage, onRemoveImage, upload
               style={styles.imagePreview}
               resizeMode="cover"
             />
-            
+
             {uploading && (
               <View style={styles.imageUploadOverlay}>
                 <Animated.View style={styles.uploadingSpinner}>
@@ -819,7 +818,7 @@ const EnhancedImageUpload = ({ selectedImage, onPickImage, onRemoveImage, upload
                 <Text style={styles.uploadingText}>Uploading...</Text>
               </View>
             )}
-            
+
             <AnimatedPressable
               style={({ pressed }) => [
                 styles.removeImageButton,
@@ -867,7 +866,7 @@ const EnhancedLocationStatus = ({ type, loading, error, address, onRetry, onManu
 
   if (loading) {
     return (
-      <Animated.View 
+      <Animated.View
         style={[
           styles.locationStatusContainer,
           styles.locationLoading,
@@ -884,17 +883,23 @@ const EnhancedLocationStatus = ({ type, loading, error, address, onRetry, onManu
           Fetching your current location...
         </Text>
         <View style={styles.locationProgress}>
-          <Animated.View 
+          <Animated.View
             style={[
               styles.locationProgressBar,
               {
-                width: fadeAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['0%', '100%']
-                })
-              }
+                transform: [
+                  {
+                    scaleX: fadeAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, 1],
+                    }),
+                  },
+                ],
+                transformOrigin: 'left',
+              },
             ]}
           />
+
         </View>
       </Animated.View>
     );
@@ -902,7 +907,7 @@ const EnhancedLocationStatus = ({ type, loading, error, address, onRetry, onManu
 
   if (error) {
     return (
-      <Animated.View 
+      <Animated.View
         style={[
           styles.locationStatusContainer,
           styles.locationError,
@@ -944,7 +949,7 @@ const EnhancedLocationStatus = ({ type, loading, error, address, onRetry, onManu
 
   if (address) {
     return (
-      <Animated.View 
+      <Animated.View
         style={[
           styles.locationStatusContainer,
           styles.locationSuccess,
@@ -983,9 +988,25 @@ export default function ReportIssueScreen() {
   const [isSearchingCity, setIsSearchingCity] = useState(false);
   const [showCitySearch, setShowCitySearch] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; long: number } | null>(null);
 
   const scrollViewRef = useRef<ScrollView>(null);
   const contentOpacity = useRef(new Animated.Value(0)).current;
+
+  const resetForm = () => {
+    setName('');
+    setPhone('');
+    setEmail('');
+    setUrgencyLevel(null);
+    setLocationChoice(null);
+    setShowManualLocation(false);
+    setManualLocation('');
+    setDescription('');
+    setSelectedImage(null);
+    setCurrentAddress('');
+    setLocationError('');
+    setCoords(null);
+  };
 
   useEffect(() => {
     Animated.timing(contentOpacity, {
@@ -1014,6 +1035,29 @@ export default function ReportIssueScreen() {
     }
   };
 
+  const predictDepartment = async () => {
+    const formData = new FormData();
+    formData.append("description", description);
+
+    if (selectedImage) {
+      formData.append("image", {
+        uri: selectedImage,
+        name: "issue.jpg",
+        type: "image/jpeg",
+      } as any);
+    }
+
+    const res = await fetch(`${API_BASE}/predict-department`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      body: formData,
+    });
+
+    return await res.json();
+  };
+
   const validateRequired = () => {
     return name.trim() !== '' &&
       phone.trim() !== '' &&
@@ -1029,7 +1073,7 @@ export default function ReportIssueScreen() {
 
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      
+
       if (status !== 'granted') {
         setLocationError('Location permission denied. Please enable location services.');
         setIsLoadingLocation(false);
@@ -1040,13 +1084,18 @@ export default function ReportIssueScreen() {
         accuracy: Location.Accuracy.High,
       });
 
+      setCoords({
+        lat: location.coords.latitude,
+        long: location.coords.longitude,
+      });
+
       const address = await Location.reverseGeocodeAsync({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
       });
 
       setCurrentAddress(
-        address[0] 
+        address[0]
           ? `${address[0].street || ''}, ${address[0].city || ''}, ${address[0].region || ''}`
           : `Coordinates: ${location.coords.latitude.toFixed(6)}, ${location.coords.longitude.toFixed(6)}`
       );
@@ -1112,7 +1161,7 @@ export default function ReportIssueScreen() {
   const pickImage = async (source: 'camera' | 'gallery') => {
     try {
       let result;
-      
+
       if (source === 'camera') {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
@@ -1136,7 +1185,7 @@ export default function ReportIssueScreen() {
       if (!result.canceled) {
         setIsUploadingImage(true);
         setSelectedImage(result.assets[0].uri);
-        
+
         // Simulate upload
         setTimeout(() => {
           setIsUploadingImage(false);
@@ -1245,15 +1294,6 @@ export default function ReportIssueScreen() {
 
   // Submit Handler
   const handleSubmit = async () => {
-    if (!validateRequired()) {
-      Alert.alert(
-        'Required Fields',
-        'Please fill all required fields marked with *',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
     // Validate location
     const hasLocation = currentAddress || (showManualLocation && manualLocation.trim());
     if (!hasLocation) {
@@ -1268,61 +1308,40 @@ export default function ReportIssueScreen() {
     setIsSubmitting(true);
 
     try {
-      // Prepare data
-      const reportData = {
+      // 1️⃣ AI prediction
+      const aiResult = await predictDepartment();
+
+      // 2️⃣ Create report
+      const reportPayload = {
         user_name: name,
         user_mobile: phone,
         user_email: email || null,
         urgency_level: urgencyLevel,
-        title: description.split(' ').slice(0, 5).join(' '),
+        title: description.split(" ").slice(0, 5).join(" "),
         description,
+        location_lat: coords?.lat,
+        location_long: coords?.long,
         location_address: currentAddress || manualLocation,
-        hasImage: !!selectedImage,
+
+        // 🔥 AI fields
+        department: aiResult.final_department,
+        auto_assigned: aiResult.final_confidence >= 50,
+        prediction_confidence: aiResult.final_confidence,
       };
 
-      console.log('Submitting report:', reportData);
+      const res = await fetch(`${API_BASE}/reports/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(reportPayload),
+      });
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (!res.ok) throw new Error("Report creation failed");
 
-      // Success
-      Alert.alert(
-        '✅ Report Submitted',
-        'Thank you for your report. It has been submitted successfully and is now under review.',
-        [
-          {
-            text: 'View Status',
-            onPress: () => {
-              // Navigate to status page
-            },
-          },
-          {
-            text: 'Done',
-            onPress: () => {
-              // Reset form
-              setName('');
-              setPhone('');
-              setEmail('');
-              setUrgencyLevel(null);
-              setLocationChoice(null);
-              setShowManualLocation(false);
-              setManualLocation('');
-              setDescription('');
-              setSelectedImage(null);
-              setCurrentAddress('');
-              setLocationError('');
-              setIsSubmitting(false);
-            },
-          },
-        ]
-      );
-    } catch (error) {
-      console.error('Submit error:', error);
-      Alert.alert(
-        'Submission Failed',
-        'Sorry, we encountered an error while submitting your report. Please try again.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert("✅ Success", "Issue reported & auto-assigned!");
+      resetForm();
+    } catch (err) {
+      Alert.alert("❌ Error", "Failed to submit issue");
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -1350,7 +1369,7 @@ export default function ReportIssueScreen() {
         onProfile={() => Alert.alert('Profile', 'Profile page coming soon')}
       />
 
-      <Animated.ScrollView 
+      <Animated.ScrollView
         ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -1622,7 +1641,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
-   headerTitle: {
+  headerTitle: {
     fontSize: 32,
     fontWeight: '800',
     color: COLORS.textLight,
@@ -1631,7 +1650,7 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
-   headerSubtitle: {
+  headerSubtitle: {
     fontSize: 16,
     fontWeight: '500',
     color: 'rgba(255, 255, 255, 0.9)',
@@ -1645,7 +1664,7 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     paddingBottom: 48,
   },
-  
+
   // Enhanced Field Card
   enhancedFieldCard: {
     backgroundColor: COLORS.cardBackground,
@@ -1939,8 +1958,10 @@ const styles = StyleSheet.create({
   },
   locationProgressBar: {
     height: '100%',
+    width: '100%', // ✅ REQUIRED
     backgroundColor: COLORS.primary,
   },
+
   locationActionButtons: {
     flexDirection: 'row',
     gap: 12,

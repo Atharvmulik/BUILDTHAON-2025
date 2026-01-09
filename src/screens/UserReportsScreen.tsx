@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { API_BASE } from "../config/api";
+import { useAuth } from '../contexts/AuthContext';
 import {
   View,
   Text,
   TextInput,
   ScrollView,
   Pressable,
-  Image,
   StyleSheet,
   Dimensions,
   SafeAreaView,
@@ -18,19 +19,15 @@ import {
   Home,
   User,
   Search,
-  Filter,
   Clock,
   Calendar,
   MapPin,
   AlertCircle,
   CheckCircle,
-  TrendingUp,
   FileText,
   Tag,
   Building,
-  Navigation,
   ChevronRight,
-  X,
   Fingerprint,
   Shield,
   FileCheck,
@@ -41,6 +38,8 @@ import {
 } from 'lucide-react-native';
 import Constants from 'expo-constants';
 
+
+
 // Enhanced formal color palette for government website
 const COLORS = {
   // Primary Government Blue Theme
@@ -48,16 +47,16 @@ const COLORS = {
   primaryLight: '#3B82F6',
   primaryDark: '#1E40AF',
   primaryGradient: ['#1E3A8A', '#2563EB', '#3B82F6'] as const,
-  
+
   // Background colors
   background: '#F8FAFC',
   backgroundLight: '#FFFFFF',
   backgroundDark: '#0F172A',
-  
+
   // Card colors
   cardBackground: '#FFFFFF',
   cardBorder: '#E2E8F0',
-  
+
   // Status colors
   success: '#059669',
   successLight: '#10B981',
@@ -66,19 +65,19 @@ const COLORS = {
   info: '#4F46E5',
   infoLight: '#6366F1',
   pending: '#6B7280',
-  
+
   // Text colors
   textPrimary: '#111827',
   textSecondary: '#374151',
   textMuted: '#6B7280',
   textLight: '#F9FAFB',
-  
+
   // UI Elements
   border: '#E5E7EB',
   borderLight: '#F3F4F6',
   shadow: 'rgba(17, 24, 39, 0.05)',
   shadowDark: 'rgba(17, 24, 39, 0.1)',
-  
+
   // Government-specific colors
   govBlue: '#1E3A8A',
   govGold: '#B8860B',
@@ -92,227 +91,22 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const AnimatedView = Animated.createAnimatedComponent(View);
 
-// Enhanced mock data with more details
-const MOCK_REPORTS = [
-  {
-    id: 1,
-    title: 'Garbage Overflow on Main Street',
-    complaint_id: 'CMP-2024-001',
-    date: '2024-01-15',
-    category: 'Sanitation',
-    status: 'in_progress',
-    department: 'Public Works Department',
-    location_address: 'Main Street, Zone 5, District 3',
-    urgency_level: 'High',
-    submitted_on: '15 Jan, 2024 10:30 AM',
-    estimated_resolution: '20 Jan, 2024',
-    officer_assigned: 'John Smith',
-    timeline: [
-      { 
-        step: 'submitted', 
-        date: '15 Jan, 2024 10:30 AM', 
-        completed: true,
-        description: 'Complaint registered in system'
-      },
-      { 
-        step: 'assigned', 
-        date: '15 Jan, 2024 02:45 PM', 
-        completed: true,
-        description: 'Assigned to sanitation team'
-      },
-      { 
-        step: 'in_progress', 
-        date: '16 Jan, 2024 09:00 AM', 
-        completed: true,
-        description: 'Team dispatched to location'
-      },
-      { 
-        step: 'resolved', 
-        date: 'Pending', 
-        completed: false,
-        description: 'Awaiting completion'
-      },
-    ]
-  },
-  {
-    id: 2,
-    title: 'Broken Street Light - Park Road',
-    complaint_id: 'CMP-2024-002',
-    date: '2024-01-14',
-    category: 'Electricity & Lighting',
-    status: 'assigned',
-    department: 'Electricity Department',
-    location_address: 'Park Road, Block B, Sector 12',
-    urgency_level: 'Medium',
-    submitted_on: '14 Jan, 2024 02:45 PM',
-    estimated_resolution: '18 Jan, 2024',
-    officer_assigned: 'Sarah Johnson',
-    timeline: [
-      { 
-        step: 'submitted', 
-        date: '14 Jan, 2024 02:45 PM', 
-        completed: true,
-        description: 'Complaint registered'
-      },
-      { 
-        step: 'assigned', 
-        date: '15 Jan, 2024 10:00 AM', 
-        completed: true,
-        description: 'Assigned to electrical maintenance'
-      },
-      { 
-        step: 'in_progress', 
-        date: 'Pending', 
-        completed: false,
-        description: 'Scheduled for inspection'
-      },
-      { 
-        step: 'resolved', 
-        date: 'Pending', 
-        completed: false,
-        description: 'Not yet started'
-      },
-    ]
-  },
-  {
-    id: 3,
-    title: 'Water Pipeline Leakage Issue',
-    complaint_id: 'CMP-2024-003',
-    date: '2024-01-13',
-    category: 'Water Supply',
-    status: 'resolved',
-    department: 'Water Department',
-    location_address: 'River View Colony, Ward 7',
-    urgency_level: 'High',
-    submitted_on: '13 Jan, 2024 09:15 AM',
-    resolved_on: '14 Jan, 2024 10:00 AM',
-    officer_assigned: 'Robert Chen',
-    timeline: [
-      { 
-        step: 'submitted', 
-        date: '13 Jan, 2024 09:15 AM', 
-        completed: true,
-        description: 'Emergency complaint registered'
-      },
-      { 
-        step: 'assigned', 
-        date: '13 Jan, 2024 11:30 AM', 
-        completed: true,
-        description: 'Assigned to water maintenance team'
-      },
-      { 
-        step: 'in_progress', 
-        date: '13 Jan, 2024 02:15 PM', 
-        completed: true,
-        description: 'Repair work completed'
-      },
-      { 
-        step: 'resolved', 
-        date: '14 Jan, 2024 10:00 AM', 
-        completed: true,
-        description: 'Issue resolved and verified'
-      },
-    ]
-  },
-  {
-    id: 4,
-    title: 'Pothole Repair - National Highway 48',
-    complaint_id: 'CMP-2024-004',
-    date: '2024-01-12',
-    category: 'Road Maintenance',
-    status: 'submitted',
-    department: 'Public Works Department',
-    location_address: 'National Highway 48, KM 25',
-    urgency_level: 'Medium',
-    submitted_on: '12 Jan, 2024 11:20 AM',
-    estimated_resolution: '25 Jan, 2024',
-    officer_assigned: 'Pending',
-    timeline: [
-      { 
-        step: 'submitted', 
-        date: '12 Jan, 2024 11:20 AM', 
-        completed: true,
-        description: 'Complaint registered'
-      },
-      { 
-        step: 'assigned', 
-        date: 'Pending', 
-        completed: false,
-        description: 'Awaiting assignment'
-      },
-      { 
-        step: 'in_progress', 
-        date: 'Pending', 
-        completed: false,
-        description: 'Not yet started'
-      },
-      { 
-        step: 'resolved', 
-        date: 'Pending', 
-        completed: false,
-        description: 'Not yet started'
-      },
-    ]
-  },
-  {
-    id: 5,
-    title: 'Sewage Blockage in Old Market',
-    complaint_id: 'CMP-2024-005',
-    date: '2024-01-11',
-    category: 'Sanitation',
-    status: 'in_progress',
-    department: 'Public Works Department',
-    location_address: 'Old Market Area, Central Zone',
-    urgency_level: 'High',
-    submitted_on: '11 Jan, 2024 04:30 PM',
-    estimated_resolution: '15 Jan, 2024',
-    officer_assigned: 'Michael Rodriguez',
-    timeline: [
-      { 
-        step: 'submitted', 
-        date: '11 Jan, 2024 04:30 PM', 
-        completed: true,
-        description: 'Emergency complaint registered'
-      },
-      { 
-        step: 'assigned', 
-        date: '12 Jan, 2024 10:15 AM', 
-        completed: true,
-        description: 'Assigned to sanitation team'
-      },
-      { 
-        step: 'in_progress', 
-        date: '12 Jan, 2024 02:00 PM', 
-        completed: true,
-        description: 'Clearing work in progress'
-      },
-      { 
-        step: 'resolved', 
-        date: 'Pending', 
-        completed: false,
-        description: 'Work 70% completed'
-      },
-    ]
-  },
-];
+// Normalize status function
+const normalizeStatus = (status: string) =>
+  status.toLowerCase().replace(/\s/g, '_');
 
 // Stats Component
-const StatsOverview = () => {
-  const totalComplaints = MOCK_REPORTS.length;
-  const resolved = MOCK_REPORTS.filter(r => r.status === 'resolved').length;
-  const inProgress = MOCK_REPORTS.filter(r => r.status === 'in_progress').length;
-  const pending = MOCK_REPORTS.filter(r => r.status === 'submitted' || r.status === 'assigned').length;
-
-  const stats = [
-    { label: 'Total\nComplaints', value: totalComplaints, color: COLORS.primary, icon: FileText },
-    { label: 'Resolved', value: resolved, color: COLORS.success, icon: CheckSquare },
-    { label: 'In Progress', value: inProgress, color: COLORS.warning, icon: Clock4 },
-    { label: 'Pending', value: pending, color: COLORS.pending, icon: Users },
+const StatsOverview = ({ stats }: { stats: { total: number, resolved: number, inProgress: number, pending: number } }) => {
+  const statsData = [
+    { label: 'Total\nComplaints', value: stats.total, color: COLORS.primary, icon: FileText },
+    { label: 'Resolved', value: stats.resolved, color: COLORS.success, icon: CheckSquare },
+    { label: 'In Progress', value: stats.inProgress, color: COLORS.warning, icon: Clock4 },
+    { label: 'Pending', value: stats.pending, color: COLORS.pending, icon: Users },
   ];
 
   return (
     <View style={styles.statsContainer}>
-      {stats.map((stat, index) => (
+      {statsData.map((stat, index) => (
         <View key={index} style={styles.statCard}>
           <View style={[styles.statIconContainer, { backgroundColor: `${stat.color}15` }]}>
             <stat.icon size={20} color={stat.color} />
@@ -326,7 +120,7 @@ const StatsOverview = () => {
 };
 
 // Enhanced Header Component with government seal effect
-const EnhancedHeader = ({ onProfile, onHome }: any) => {
+const EnhancedHeader = ({ onProfile, onHome, searchQuery, onSearchChange }: any) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const titleAnim = useRef(new Animated.Value(0)).current;
 
@@ -359,7 +153,7 @@ const EnhancedHeader = ({ onProfile, onHome }: any) => {
   });
 
   return (
-    <Animated.View 
+    <Animated.View
       style={[
         styles.headerContainer,
         { opacity: fadeAnim }
@@ -410,7 +204,7 @@ const EnhancedHeader = ({ onProfile, onHome }: any) => {
             <Text style={styles.headerTitle}>Track Issues Here !</Text>
             <Text style={styles.headerSubtitle}>Monitor Your Complaint Status</Text>
           </Animated.View>
-          
+
           <View style={styles.govBadge}>
             <Shield size={16} color={COLORS.govGold} />
             <Text style={styles.govBadgeText}></Text>
@@ -423,6 +217,8 @@ const EnhancedHeader = ({ onProfile, onHome }: any) => {
             style={styles.searchInput}
             placeholder="Search complaints by ID, location, or category..."
             placeholderTextColor="#9CA3AF"
+            value={searchQuery}
+            onChangeText={onSearchChange}
           />
         </View>
       </View>
@@ -441,8 +237,8 @@ const FilterChips = ({ currentFilter, onFilterChange }: any) => {
 
   return (
     <View style={styles.filterContainer}>
-      <ScrollView 
-        horizontal 
+      <ScrollView
+        horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filterScrollContent}
       >
@@ -493,7 +289,7 @@ const TimelineComponent = ({ timeline, statusColor, showTimeline }: any) => {
           useNativeDriver: true,
           easing: Easing.out(Easing.cubic),
         }),
-        Animated.stagger(150, dotAnimations.map((anim: Animated.Value) => 
+        Animated.stagger(150, dotAnimations.map((anim: Animated.Value) =>
           Animated.spring(anim, {
             toValue: 1,
             tension: 200,
@@ -531,7 +327,7 @@ const TimelineComponent = ({ timeline, statusColor, showTimeline }: any) => {
       }
     ]}>
       <Text style={styles.timelineTitle}>Complaint Timeline</Text>
-      
+
       <View style={styles.timelineWrapper}>
         {timeline.map((item: any, index: number) => {
           const dotScale = dotAnimations[index].interpolate({
@@ -565,7 +361,7 @@ const TimelineComponent = ({ timeline, statusColor, showTimeline }: any) => {
                     )}
                   </View>
                 </AnimatedView>
-                
+
                 {index < timeline.length - 1 && (
                   <View style={[
                     styles.timelineConnector,
@@ -573,25 +369,25 @@ const TimelineComponent = ({ timeline, statusColor, showTimeline }: any) => {
                   ]} />
                 )}
               </View>
-              
+
               <View style={styles.timelineRight}>
                 <View style={styles.timelineContent}>
                   <Text style={[
                     styles.timelineStepText,
                     item.completed && { color: COLORS.textPrimary, fontWeight: '700' }
                   ]}>
-                    {item.step === 'submitted' ? 'Submitted' : 
-                     item.step === 'assigned' ? 'Assigned' : 
-                     item.step === 'in_progress' ? 'In Progress' : 'Resolved'}
+                    {item.step === 'submitted' ? 'Submitted' :
+                      item.step === 'assigned' ? 'Assigned' :
+                        item.step === 'in_progress' ? 'In Progress' : 'Resolved'}
                   </Text>
-                  
+
                   <Text style={[
                     styles.timelineDateText,
                     item.completed ? { color: statusColor } : { color: '#9CA3AF' }
                   ]}>
                     {item.date}
                   </Text>
-                  
+
                   {item.description && (
                     <Text style={styles.timelineDescription} numberOfLines={2}>
                       {item.description}
@@ -610,47 +406,76 @@ const TimelineComponent = ({ timeline, statusColor, showTimeline }: any) => {
 // Enhanced Complaint Card Component
 const ComplaintCard = ({ report, onPress }: any) => {
   const [showTimeline, setShowTimeline] = useState(false);
+  const [timeline, setTimeline] = useState<any[]>([]);
   const cardAnim = useRef(new Animated.Value(0)).current;
 
   const getStatusConfig = (status: string) => {
-    switch (status) {
+    const normalizedStatus = normalizeStatus(status);
+
+    switch (normalizedStatus) {
       case 'submitted':
-        return { 
-          text: 'Submitted', 
+      case 'reported':
+        return {
+          text: 'Submitted',
           color: '#6B7280',
           icon: FileText,
           bgColor: '#F3F4F6'
         };
       case 'assigned':
-        return { 
-          text: 'Assigned', 
+        return {
+          text: 'Assigned',
           color: '#2563EB',
           icon: Users,
           bgColor: '#DBEAFE'
         };
       case 'in_progress':
-        return { 
-          text: 'In Progress', 
+        return {
+          text: 'In Progress',
           color: '#D97706',
           icon: Clock4,
           bgColor: '#FEF3C7'
         };
       case 'resolved':
-        return { 
-          text: 'Resolved', 
+      case 'closed':
+        return {
+          text: 'Resolved',
           color: '#059669',
           icon: CheckSquare,
           bgColor: '#D1FAE5'
         };
       default:
-        return { 
-          text: 'Submitted', 
+        return {
+          text: 'Submitted',
           color: '#6B7280',
           icon: FileText,
           bgColor: '#F3F4F6'
         };
     }
   };
+
+  const loadTimeline = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/reports/${report.id}/timeline`);
+      const data = await res.json();
+
+      setTimeline(
+        data.timeline.map((t: any) => ({
+          step: t.event.toLowerCase().replace(/\s/g, '_'),
+          date: new Date(t.timestamp).toLocaleString(),
+          completed: t.status === "completed",
+          description: t.description,
+        }))
+      );
+    } catch (error) {
+      console.error("Failed to load timeline:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (showTimeline) {
+      loadTimeline();
+    }
+  }, [showTimeline, timeline.length]);
 
   const getUrgencyConfig = (level: string) => {
     switch (level) {
@@ -664,12 +489,12 @@ const ComplaintCard = ({ report, onPress }: any) => {
   };
 
   const statusConfig = getStatusConfig(report.status);
-  const urgencyConfig = getUrgencyConfig(report.urgency_level);
+  const urgencyConfig = getUrgencyConfig(report.urgency_level || 'Medium');
 
   const handlePress = () => {
     const toValue = showTimeline ? 0 : 1;
     setShowTimeline(!showTimeline);
-    
+
     Animated.spring(cardAnim, {
       toValue,
       tension: 200,
@@ -696,7 +521,7 @@ const ComplaintCard = ({ report, onPress }: any) => {
           <Fingerprint size={14} color={COLORS.primary} />
           <Text style={styles.complaintId}>{report.complaint_id}</Text>
         </View>
-        
+
         <View style={[styles.statusBadge, { backgroundColor: statusConfig.bgColor }]}>
           <statusConfig.icon size={14} color={statusConfig.color} />
           <Text style={[styles.statusText, { color: statusConfig.color }]}>
@@ -715,19 +540,19 @@ const ComplaintCard = ({ report, onPress }: any) => {
           <Text style={styles.detailLabel}>Category:</Text>
           <Text style={styles.detailValue}>{report.category}</Text>
         </View>
-        
+
         <View style={styles.detailItem}>
           <Calendar size={16} color={COLORS.textMuted} />
           <Text style={styles.detailLabel}>Submitted:</Text>
-          <Text style={styles.detailValue}>{report.submitted_on}</Text>
+          <Text style={styles.detailValue}>{report.date || report.submitted_on}</Text>
         </View>
-        
+
         <View style={styles.detailItem}>
           <Building size={16} color={COLORS.textMuted} />
           <Text style={styles.detailLabel}>Department:</Text>
-          <Text style={styles.detailValue}>{report.department}</Text>
+          <Text style={styles.detailValue}>{report.department || 'Public Works Department'}</Text>
         </View>
-        
+
         <View style={styles.detailItem}>
           <MapPin size={16} color={COLORS.textMuted} />
           <Text style={styles.detailLabel}>Location:</Text>
@@ -741,10 +566,10 @@ const ComplaintCard = ({ report, onPress }: any) => {
         <View style={[styles.urgencyBadge, { backgroundColor: urgencyConfig.bgColor }]}>
           <urgencyConfig.icon size={14} color={urgencyConfig.color} />
           <Text style={[styles.urgencyText, { color: urgencyConfig.color }]}>
-            {report.urgency_level} Priority
+            {(report.urgency_level || 'Medium') + ' Priority'}
           </Text>
         </View>
-        
+
         <Pressable
           onPress={handlePress}
           style={({ pressed }) => [
@@ -763,9 +588,9 @@ const ComplaintCard = ({ report, onPress }: any) => {
       </View>
 
       {/* Enhanced Timeline Component */}
-      {showTimeline && (
-        <TimelineComponent 
-          timeline={report.timeline}
+      {showTimeline && timeline.length > 0 && (
+        <TimelineComponent
+          timeline={timeline}
           statusColor={statusConfig.color}
           showTimeline={showTimeline}
         />
@@ -776,68 +601,130 @@ const ComplaintCard = ({ report, onPress }: any) => {
 
 // Main Screen Component
 export default function UserReportsScreen() {
-  const [reports, setReports] = useState(MOCK_REPORTS);
-  const [filteredReports, setFilteredReports] = useState(MOCK_REPORTS);
-  const [currentFilter, setCurrentFilter] = useState('all');
+  const [reports, setReports] = useState<any[]>([]);
+  const [filteredReports, setFilteredReports] = useState<any[]>([]);
+  const [currentFilter, setCurrentFilter] = useState<'all' | 'active' | 'resolved' | 'pending'>('all');
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [stats, setStats] = useState({ total: 0, resolved: 0, inProgress: 0, pending: 0 });
+
+
+
+const { userEmail, isLoading: authLoading } = useAuth();
+
+  if (authLoading) {
+    return null; // or a loading spinner
+  }
+
+  if (!userEmail) {
+    return null; // or redirect to login
+  }
+
+  const USER_EMAIL = userEmail;
+
+  const loadUserReports = async (filter = currentFilter) => {
+    try {
+      setIsLoading(true);
+
+      const res = await fetch(
+        `${API_BASE}/users/reports/filtered?status_filter=${filter}&user_email=${encodeURIComponent(USER_EMAIL)}`
+      );
+
+      const data = await res.json();
+
+      const formattedReports = (data.complaints ?? []).map((report: any) => ({
+        ...report,
+        status: normalizeStatus(report.status),
+        submitted_on: report.date || report.submitted_on,
+      }));
+
+      setReports(formattedReports);
+      setFilteredReports(formattedReports);
+
+      const total = formattedReports.length;
+
+      const resolved = formattedReports.filter((r: any) =>
+        normalizeStatus(r.status) === 'resolved' ||
+        normalizeStatus(r.status) === 'closed'
+      ).length;
+
+      const inProgress = formattedReports.filter((r: any) =>
+        normalizeStatus(r.status) === 'in_progress'
+      ).length;
+
+      const pending = formattedReports.filter((r: any) =>
+        ['submitted', 'reported', 'assigned'].includes(normalizeStatus(r.status))
+      ).length;
+
+      setStats({ total, resolved, inProgress, pending });
+
+
+    } catch (err) {
+      console.error("Failed to load user reports", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      filterReports();
-      setIsLoading(false);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [currentFilter, searchQuery]);
+    loadUserReports();
+  }, []);
 
-  const filterReports = () => {
-    let filtered = [...MOCK_REPORTS];
-
-    if (currentFilter === 'active') {
-      filtered = filtered.filter(r => r.status !== 'resolved');
-    } else if (currentFilter === 'resolved') {
-      filtered = filtered.filter(r => r.status === 'resolved');
-    } else if (currentFilter === 'pending') {
-      filtered = filtered.filter(r => r.status === 'submitted' || r.status === 'assigned');
-    }
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(r => 
-        r.title.toLowerCase().includes(query) ||
-        r.complaint_id.toLowerCase().includes(query) ||
-        r.category.toLowerCase().includes(query) ||
-        r.location_address.toLowerCase().includes(query)
-      );
-    }
-
-    setFilteredReports(filtered);
-  };
-
-  const handleFilterChange = (filter: string) => {
+  const handleFilterChange = (filter: 'all' | 'active' | 'resolved' | 'pending') => {
     setCurrentFilter(filter);
+    loadUserReports(filter);
   };
 
-  const handleSearch = (query: string) => {
+  const handleSearch = async (query: string) => {
     setSearchQuery(query);
+
+    if (!query.trim()) {
+      loadUserReports(currentFilter);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      const res = await fetch(
+        `${API_BASE}/users/reports/search?query=${encodeURIComponent(query)}&user_email=${encodeURIComponent(USER_EMAIL)}`
+      );
+
+      const data = await res.json();
+
+      const formattedReports = (data.complaints ?? []).map((report: any) => ({
+        ...report,
+        status: normalizeStatus(report.status),
+        submitted_on: report.date || report.submitted_on,
+      }));
+
+      setFilteredReports(formattedReports);
+    } catch (err) {
+      console.error("Search failed", err);
+      setFilteredReports([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleReportPress = (report: any) => {
     console.log('Navigate to report details:', report.id);
+    // TODO: Implement navigation to report details
   };
 
   const handleHomePress = () => {
     console.log('Navigate to home');
+    // TODO: Implement navigation to home
   };
 
   const handleProfilePress = () => {
     console.log('Navigate to profile');
+    // TODO: Implement navigation to profile
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -847,11 +734,13 @@ export default function UserReportsScreen() {
         <EnhancedHeader
           onHome={handleHomePress}
           onProfile={handleProfilePress}
+          searchQuery={searchQuery}
+          onSearchChange={handleSearch}
         />
-        
+
         {/* Stats Overview */}
-        <StatsOverview />
-        
+        <StatsOverview stats={stats} />
+
         {/* Filter Section */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Your Complaints</Text>
@@ -859,7 +748,7 @@ export default function UserReportsScreen() {
             {filteredReports.length} complaint{filteredReports.length !== 1 ? 's' : ''} found
           </Text>
         </View>
-        
+
         <FilterChips
           currentFilter={currentFilter}
           onFilterChange={handleFilterChange}
@@ -890,7 +779,7 @@ export default function UserReportsScreen() {
             ))}
           </View>
         )}
-        
+
         {/* Footer Information */}
         <View style={styles.footerInfo}>
           <Text style={styles.footerTitle}>Need Help?</Text>
@@ -914,21 +803,44 @@ export function ReportDetailsScreen({ route, navigation }: any) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const foundReport = MOCK_REPORTS.find(r => r.id === reportId) || MOCK_REPORTS[0];
-      setReport(foundReport);
-      setIsLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
+    const loadReportDetails = async () => {
+      try {
+        setIsLoading(true);
+        const res = await fetch(`${API_BASE}/reports/${reportId}/timeline`);
+        const data = await res.json();
+
+        if (data.complaint_details) {
+          setReport({
+            ...data.complaint_details,
+            status: normalizeStatus(data.complaint_details.status),
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load report details:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadReportDetails();
   }, [reportId]);
 
   const getStatusConfig = (status: string) => {
-    switch (status) {
-      case 'submitted': return { text: 'Submitted', color: '#6B7280', bgColor: '#F3F4F6' };
-      case 'assigned': return { text: 'Assigned', color: '#2563EB', bgColor: '#DBEAFE' };
-      case 'in_progress': return { text: 'In Progress', color: '#D97706', bgColor: '#FEF3C7' };
-      case 'resolved': return { text: 'Resolved', color: '#059669', bgColor: '#D1FAE5' };
-      default: return { text: 'Submitted', color: '#6B7280', bgColor: '#F3F4F6' };
+    const normalizedStatus = normalizeStatus(status);
+
+    switch (normalizedStatus) {
+      case 'submitted':
+      case 'reported':
+        return { text: 'Submitted', color: '#6B7280', bgColor: '#F3F4F6' };
+      case 'assigned':
+        return { text: 'Assigned', color: '#2563EB', bgColor: '#DBEAFE' };
+      case 'in_progress':
+        return { text: 'In Progress', color: '#D97706', bgColor: '#FEF3C7' };
+      case 'resolved':
+      case 'closed':
+        return { text: 'Resolved', color: '#059669', bgColor: '#D1FAE5' };
+      default:
+        return { text: 'Submitted', color: '#6B7280', bgColor: '#F3F4F6' };
     }
   };
 
@@ -938,6 +850,20 @@ export function ReportDetailsScreen({ route, navigation }: any) {
         <View style={styles.loadingContainer}>
           <View style={styles.spinner} />
           <Text style={styles.loadingText}>Loading complaint details...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!report) {
+    return (
+      <View style={styles.detailsContainer}>
+        <View style={styles.emptyContainer}>
+          <FileText size={64} color="#CBD5E1" />
+          <Text style={styles.emptyTitle}>Report not found</Text>
+          <Text style={styles.emptySubtitle}>
+            The requested complaint could not be loaded
+          </Text>
         </View>
       </View>
     );
@@ -961,87 +887,85 @@ export function ReportDetailsScreen({ route, navigation }: any) {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.detailsScrollView}
         contentContainerStyle={styles.detailsScrollContent}
       >
-        {report && (
-          <View style={styles.detailsCard}>
-            <View style={styles.detailsCardHeader}>
-              <Text style={styles.detailsTitle}>{report.title}</Text>
-              <View style={[styles.detailsStatusBadge, { backgroundColor: statusConfig.bgColor }]}>
-                <Text style={[styles.detailsStatusText, { color: statusConfig.color }]}>
-                  {statusConfig.text}
-                </Text>
-              </View>
-            </View>
-            
-            <View style={styles.detailsInfoGrid}>
-              <View style={styles.detailInfoRow}>
-                <Fingerprint size={18} color={COLORS.primary} />
-                <Text style={styles.detailInfoLabel}>Complaint ID:</Text>
-                <Text style={styles.detailInfoValue}>{report.complaint_id}</Text>
-              </View>
-              
-              <View style={styles.detailInfoRow}>
-                <Calendar size={18} color={COLORS.primary} />
-                <Text style={styles.detailInfoLabel}>Submitted on:</Text>
-                <Text style={styles.detailInfoValue}>{report.submitted_on}</Text>
-              </View>
-              
-              <View style={styles.detailInfoRow}>
-                <Tag size={18} color={COLORS.primary} />
-                <Text style={styles.detailInfoLabel}>Category:</Text>
-                <Text style={styles.detailInfoValue}>{report.category}</Text>
-              </View>
-              
-              <View style={styles.detailInfoRow}>
-                <Building size={18} color={COLORS.primary} />
-                <Text style={styles.detailInfoLabel}>Department:</Text>
-                <Text style={styles.detailInfoValue}>{report.department}</Text>
-              </View>
-              
-              <View style={styles.detailInfoRow}>
-                <MapPin size={18} color={COLORS.primary} />
-                <Text style={styles.detailInfoLabel}>Location:</Text>
-                <Text style={[styles.detailInfoValue, { color: COLORS.primary }]}>
-                  {report.location_address}
-                </Text>
-              </View>
-              
-              <View style={styles.detailInfoRow}>
-                <AlertCircle size={18} color={COLORS.primary} />
-                <Text style={styles.detailInfoLabel}>Urgency Level:</Text>
-                <Text style={[
-                  styles.detailInfoValue,
-                  { 
-                    color: report.urgency_level === 'High' ? '#DC2626' : 
-                           report.urgency_level === 'Medium' ? '#D97706' : '#059669',
-                    fontWeight: '600'
-                  }
-                ]}>
-                  {report.urgency_level}
-                </Text>
-              </View>
-              
-              {report.officer_assigned && report.officer_assigned !== 'Pending' && (
-                <View style={styles.detailInfoRow}>
-                  <User size={18} color={COLORS.primary} />
-                  <Text style={styles.detailInfoLabel}>Officer Assigned:</Text>
-                  <Text style={styles.detailInfoValue}>{report.officer_assigned}</Text>
-                </View>
-              )}
-              
-              {report.estimated_resolution && (
-                <View style={styles.detailInfoRow}>
-                  <Clock size={18} color={COLORS.primary} />
-                  <Text style={styles.detailInfoLabel}>Estimated Resolution:</Text>
-                  <Text style={styles.detailInfoValue}>{report.estimated_resolution}</Text>
-                </View>
-              )}
+        <View style={styles.detailsCard}>
+          <View style={styles.detailsCardHeader}>
+            <Text style={styles.detailsTitle}>{report.title}</Text>
+            <View style={[styles.detailsStatusBadge, { backgroundColor: statusConfig.bgColor }]}>
+              <Text style={[styles.detailsStatusText, { color: statusConfig.color }]}>
+                {statusConfig.text}
+              </Text>
             </View>
           </View>
-        )}
+
+          <View style={styles.detailsInfoGrid}>
+            <View style={styles.detailInfoRow}>
+              <Fingerprint size={18} color={COLORS.primary} />
+              <Text style={styles.detailInfoLabel}>Complaint ID:</Text>
+              <Text style={styles.detailInfoValue}>{report.complaint_id}</Text>
+            </View>
+
+            <View style={styles.detailInfoRow}>
+              <Calendar size={18} color={COLORS.primary} />
+              <Text style={styles.detailInfoLabel}>Submitted on:</Text>
+              <Text style={styles.detailInfoValue}>{report.submitted_on}</Text>
+            </View>
+
+            <View style={styles.detailInfoRow}>
+              <Tag size={18} color={COLORS.primary} />
+              <Text style={styles.detailInfoLabel}>Category:</Text>
+              <Text style={styles.detailInfoValue}>{report.category}</Text>
+            </View>
+
+            <View style={styles.detailInfoRow}>
+              <Building size={18} color={COLORS.primary} />
+              <Text style={styles.detailInfoLabel}>Department:</Text>
+              <Text style={styles.detailInfoValue}>{report.department}</Text>
+            </View>
+
+            <View style={styles.detailInfoRow}>
+              <MapPin size={18} color={COLORS.primary} />
+              <Text style={styles.detailInfoLabel}>Location:</Text>
+              <Text style={[styles.detailInfoValue, { color: COLORS.primary }]}>
+                {report.location_address}
+              </Text>
+            </View>
+
+            <View style={styles.detailInfoRow}>
+              <AlertCircle size={18} color={COLORS.primary} />
+              <Text style={styles.detailInfoLabel}>Urgency Level:</Text>
+              <Text style={[
+                styles.detailInfoValue,
+                {
+                  color: report.urgency_level === 'High' ? '#DC2626' :
+                    report.urgency_level === 'Medium' ? '#D97706' : '#059669',
+                  fontWeight: '600'
+                }
+              ]}>
+                {report.urgency_level || 'Medium'}
+              </Text>
+            </View>
+
+            {report.officer_assigned && report.officer_assigned !== 'Pending' && (
+              <View style={styles.detailInfoRow}>
+                <User size={18} color={COLORS.primary} />
+                <Text style={styles.detailInfoLabel}>Officer Assigned:</Text>
+                <Text style={styles.detailInfoValue}>{report.officer_assigned}</Text>
+              </View>
+            )}
+
+            {report.estimated_resolution && (
+              <View style={styles.detailInfoRow}>
+                <Clock size={18} color={COLORS.primary} />
+                <Text style={styles.detailInfoLabel}>Estimated Resolution:</Text>
+                <Text style={styles.detailInfoValue}>{report.estimated_resolution}</Text>
+              </View>
+            )}
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

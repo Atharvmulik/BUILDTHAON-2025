@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { API_BASE } from "../../src/config/api";
 import {
   View,
   Text,
@@ -20,9 +21,16 @@ import Icon, { IconName } from '../components/icon';
 const { width, height } = Dimensions.get('window');
 
 interface UserProfilePageProps {
-  userEmail: string;
-  userName: string;
+  userEmail: string; // coming from auth
 }
+
+interface AdminProfile {
+  name: string;
+  email: string;
+  contact: string;
+  admin_id: string;
+}
+
 
 interface StatItem {
   value: string;
@@ -35,18 +43,16 @@ interface InfoRow {
   icon: IconName;
 }
 
-const UserProfilePage: React.FC<UserProfilePageProps> = ({
-  userEmail,
-  userName,
-}) => {
+const UserProfilePage: React.FC<UserProfilePageProps> = ({ userEmail }) => {
+  const [profile, setProfile] = useState<AdminProfile | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalContent, setModalContent] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedName, setEditedName] = useState(userName);
-  const [editedEmail, setEditedEmail] = useState(userEmail);
-  const [editedContact, setEditedContact] = useState('+91 9876543210');
+  const [editedName, setEditedName] = useState("");
+  const [editedEmail, setEditedEmail] = useState("");
+  const [editedContact, setEditedContact] = useState("");
 
   // Animation values
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -67,8 +73,37 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
     { title: "Role", value: "System Administrator", icon: "work-outline" },
     { title: "Email", value: editedEmail, icon: "email" },
     { title: "Contact", value: editedContact, icon: "phone" },
-    { title: "Admin ID", value: "ADM-2024-001", icon: "badge" },
+    { title: "Admin ID", value: profile?.admin_id || "", icon: "badge" },
   ];
+
+
+
+  useEffect(() => {
+    const fetchAdminProfile = async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE}/admin/profile?email=${userEmail}`
+        );
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch admin profile");
+        }
+
+        const data: AdminProfile = await res.json();
+
+        setProfile(data);
+        setEditedName(data.name);
+        setEditedEmail(data.email);
+        setEditedContact(data.contact);
+      } catch (err) {
+        console.error("Failed to load admin profile", err);
+      }
+    };
+
+    fetchAdminProfile();
+  }, [userEmail]);
+
+
 
   useEffect(() => {
     startAnimations();
@@ -195,13 +230,13 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
                     style={styles.editInput}
                     value={editedName}
                     onChangeText={setEditedName}
-                    placeholder="Enter name"
                   />
                 ) : (
-                  userName
+                  profile?.name || ""
                 )}
+
               </Animated.Text>
-              
+
               <Animated.Text
                 style={[
                   styles.profileRole,
@@ -305,7 +340,7 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
                 <View style={styles.infoIconContainer}>
                   <Icon name={row.icon} size={20} color="#667EEA" />
                 </View>
-                
+
                 <View style={styles.infoContent}>
                   <Text style={styles.infoTitle}>{row.title}</Text>
                   {isEditing && (row.title === "Name" || row.title === "Email" || row.title === "Contact") ? (
@@ -313,13 +348,13 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
                       style={styles.editInfoInput}
                       value={
                         row.title === "Name" ? editedName :
-                        row.title === "Email" ? editedEmail :
-                        editedContact
+                          row.title === "Email" ? editedEmail :
+                            editedContact
                       }
                       onChangeText={
                         row.title === "Name" ? setEditedName :
-                        row.title === "Email" ? setEditedEmail :
-                        setEditedContact
+                          row.title === "Email" ? setEditedEmail :
+                            setEditedContact
                       }
                       placeholder={`Enter ${row.title.toLowerCase()}`}
                     />
@@ -351,10 +386,13 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
             style={[styles.actionButton, styles.cancelButton]}
             onPress={() => {
               setIsEditing(false);
-              setEditedName(userName);
-              setEditedEmail(userEmail);
-              setEditedContact('+91 9876543210');
+              if (profile) {
+                setEditedName(profile.name);
+                setEditedEmail(profile.email);
+                setEditedContact(profile.contact);
+              }
             }}
+
             activeOpacity={0.8}
           >
             <LinearGradient
@@ -386,13 +424,7 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
           onPress={() => setIsEditing(true)}
           activeOpacity={0.8}
         >
-          <LinearGradient
-            colors={['#667EEA', '#764BA2']}
-            style={styles.buttonGradient}
-          >
-            <Icon name="edit" size={20} color="#FFFFFF" />
-            <Text style={styles.buttonText}>Edit Profile</Text>
-          </LinearGradient>
+          
         </TouchableOpacity>
       )}
     </Animated.View>
@@ -408,52 +440,6 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
         },
       ]}
     >
-      <Text style={styles.settingsTitle}>Settings</Text>
-      
-      <TouchableOpacity
-        style={styles.settingsOption}
-        onPress={() => Alert.alert("Notifications", "Notification settings")}
-        activeOpacity={0.7}
-      >
-        <View style={styles.settingsIcon}>
-          <Icon name="notifications" size={24} color="#667EEA" />
-        </View>
-        <View style={styles.settingsContent}>
-          <Text style={styles.settingsOptionTitle}>Notifications</Text>
-          <Text style={styles.settingsOptionDesc}>Manage your notification preferences</Text>
-        </View>
-        <Icon name="chevron-right" size={24} color="#8F92A1" />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.settingsOption}
-        onPress={() => Alert.alert("Security", "Security settings")}
-        activeOpacity={0.7}
-      >
-        <View style={styles.settingsIcon}>
-          <Icon name="security" size={24} color="#667EEA" />
-        </View>
-        <View style={styles.settingsContent}>
-          <Text style={styles.settingsOptionTitle}>Security</Text>
-          <Text style={styles.settingsOptionDesc}>Change password and security settings</Text>
-        </View>
-        <Icon name="chevron-right" size={24} color="#8F92A1" />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.settingsOption}
-        onPress={() => Alert.alert("Logout", "Are you sure you want to logout?")}
-        activeOpacity={0.7}
-      >
-        <View style={[styles.settingsIcon, { backgroundColor: '#FF6B6B20' }]}>
-          <Icon name="logout" size={24} color="#FF6B6B" />
-        </View>
-        <View style={styles.settingsContent}>
-          <Text style={[styles.settingsOptionTitle, { color: '#FF6B6B' }]}>Logout</Text>
-          <Text style={styles.settingsOptionDesc}>Sign out from your account</Text>
-        </View>
-        <Icon name="chevron-right" size={24} color="#8F92A1" />
-      </TouchableOpacity>
     </Animated.View>
   );
 
@@ -480,7 +466,7 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
           >
             <Text style={styles.modalTitle}>{modalTitle}</Text>
             <Text style={styles.modalContent}>{modalContent}</Text>
-            
+
             <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => setModalVisible(false)}
@@ -522,34 +508,6 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
 
           {/* Action Buttons */}
           {renderActionButtons()}
-
-          {/* Settings Section */}
-          <TouchableOpacity
-            style={styles.settingsToggle}
-            onPress={() => setShowSettings(!showSettings)}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={showSettings ? ['#667EEA', '#764BA2'] : ['#F8F9FA', '#FFFFFF']}
-              style={styles.settingsToggleGradient}
-            >
-              <Text style={[
-                styles.settingsToggleText,
-                showSettings && { color: '#FFFFFF' }
-              ]}>
-                {showSettings ? 'Hide Settings' : 'Show Settings'}
-              </Text>
-              <Icon 
-                name={showSettings ? "expand-less" : "expand-more"} 
-                size={24} 
-                color={showSettings ? "#FFFFFF" : "#667EEA"} 
-              />
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Settings Options */}
-          {showSettings && renderSettingsOptions()}
-
           {/* Additional Info */}
           <Animated.View
             style={[
@@ -560,24 +518,7 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
               },
             ]}
           >
-            <Text style={styles.additionalInfoTitle}>System Information</Text>
-            <View style={styles.infoGrid}>
-              <View style={styles.infoGridItem}>
-                <Icon name="today" size={24} color="#667EEA" />
-                <Text style={styles.infoGridTitle}>Member Since</Text>
-                <Text style={styles.infoGridValue}>Jan 15, 2024</Text>
-              </View>
-              <View style={styles.infoGridItem}>
-                <Icon name="verified-user" size={24} color="#00E5A0" />
-                <Text style={styles.infoGridTitle}>Last Login</Text>
-                <Text style={styles.infoGridValue}>Today, 10:30 AM</Text>
-              </View>
-              <View style={styles.infoGridItem}>
-                <Icon name="dashboard" size={24} color="#FFB74D" />
-                <Text style={styles.infoGridTitle}>Active Sessions</Text>
-                <Text style={styles.infoGridValue}>2 Devices</Text>
-              </View>
-            </View>
+
           </Animated.View>
         </View>
       </Animated.ScrollView>

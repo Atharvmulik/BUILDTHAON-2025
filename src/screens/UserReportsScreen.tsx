@@ -610,8 +610,11 @@ export default function UserReportsScreen() {
 
 
 
-const { userEmail, isLoading: authLoading } = useAuth();
-
+  const {
+    token,
+    userEmail,
+    isLoading: authLoading
+  } = useAuth();
   if (authLoading) {
     return null; // or a loading spinner
   }
@@ -623,12 +626,26 @@ const { userEmail, isLoading: authLoading } = useAuth();
   const USER_EMAIL = userEmail;
 
   const loadUserReports = async (filter = currentFilter) => {
+    if (!token) return; // ✅ safety
+
     try {
       setIsLoading(true);
 
       const res = await fetch(
-        `${API_BASE}/users/reports/filtered?status_filter=${filter}&user_email=${encodeURIComponent(USER_EMAIL)}`
+        `${API_BASE}/users/reports/filtered?status_filter=${filter}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
       );
+
+      if (!res.ok) {
+        console.error("Unauthorized or failed request");
+        return;
+      }
 
       const data = await res.json();
 
@@ -642,22 +659,19 @@ const { userEmail, isLoading: authLoading } = useAuth();
       setFilteredReports(formattedReports);
 
       const total = formattedReports.length;
-
       const resolved = formattedReports.filter((r: any) =>
-        normalizeStatus(r.status) === 'resolved' ||
-        normalizeStatus(r.status) === 'closed'
+        ["resolved", "closed"].includes(normalizeStatus(r.status))
       ).length;
 
       const inProgress = formattedReports.filter((r: any) =>
-        normalizeStatus(r.status) === 'in_progress'
+        normalizeStatus(r.status) === "in_progress"
       ).length;
 
       const pending = formattedReports.filter((r: any) =>
-        ['submitted', 'reported', 'assigned'].includes(normalizeStatus(r.status))
+        ["submitted", "reported", "assigned"].includes(normalizeStatus(r.status))
       ).length;
 
       setStats({ total, resolved, inProgress, pending });
-
 
     } catch (err) {
       console.error("Failed to load user reports", err);
@@ -666,9 +680,13 @@ const { userEmail, isLoading: authLoading } = useAuth();
     }
   };
 
+
   useEffect(() => {
-    loadUserReports();
-  }, []);
+    if (token) {
+      loadUserReports();
+    }
+  }, [token]);
+
 
   const handleFilterChange = (filter: 'all' | 'active' | 'resolved' | 'pending') => {
     setCurrentFilter(filter);

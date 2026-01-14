@@ -1,5 +1,6 @@
 // File: MapViewScreen.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { API_BASE } from "../config/api";
 import {
   View,
   Text,
@@ -82,45 +83,45 @@ const MapViewScreen: React.FC = () => {
   };
 
   useEffect(() => {
-  // Start animations
-  Animated.parallel([
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 800,
-      useNativeDriver: true,
-    }),
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      friction: 8,
-      tension: 40,
-      useNativeDriver: true,
-    }),
-    Animated.timing(searchSlideAnim, {
-      toValue: 0,
-      duration: 600,
-      useNativeDriver: true,
-    }),
-    // ✅ Fixed: No useNativeDriver in Animated.loop
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.1,
-          duration: 1000,
-          useNativeDriver: true,  // This is fine
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,  // This is fine
-        }),
-      ])
-    ),
-  ]).start();
+    // Start animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(searchSlideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      // ✅ Fixed: No useNativeDriver in Animated.loop
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.1,
+            duration: 1000,
+            useNativeDriver: true,  // This is fine
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,  // This is fine
+          }),
+        ])
+      ),
+    ]).start();
 
-  // Load data
-  loadUserLocation();
-  loadIssues();
-}, []);
+    // Load data
+    loadUserLocation();
+    loadIssues();
+  }, []);
 
   const loadUserLocation = async () => {
     try {
@@ -141,85 +142,42 @@ const MapViewScreen: React.FC = () => {
       console.error('Error getting location:', error);
     }
   };
+  const normalizeStatus = (status: string) => {
+    if (!status) return "Pending";
+    if (status === "Reported") return "New";
+    return status;
+  };
 
   const loadIssues = async () => {
     try {
       setIsLoading(true);
-      
-      // Simulate API call with mock data
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const mockIssues: Issue[] = [
-        {
-          id: 1,
-          title: 'Pothole on Main Street',
-          description: 'Large pothole causing traffic issues',
-          status: 'Pending',
-          urgency: 'Urgent',
-          latitude: 18.5204,
-          longitude: 73.8567,
-          createdAt: '2024-01-15',
-          userEmail: 'citizen1@example.com',
-          department: 'Road Dept',
-          icon: '🚧',
-        },
-        {
-          id: 2,
-          title: 'Street Light Outage',
-          description: 'Street light not working in residential area',
-          status: 'In Progress',
-          urgency: 'High',
-          latitude: 18.5304,
-          longitude: 73.8667,
-          createdAt: '2024-01-14',
-          userEmail: 'citizen2@example.com',
-          department: 'Electricity Dept',
-          icon: '💡',
-        },
-        {
-          id: 3,
-          title: 'Garbage Overflow',
-          description: 'Garbage bin overflowing for 3 days',
-          status: 'New',
-          urgency: 'Medium',
-          latitude: 18.5404,
-          longitude: 73.8467,
-          createdAt: '2024-01-16',
-          userEmail: 'citizen3@example.com',
-          department: 'Sanitation Dept',
-          icon: '🗑️',
-        },
-        {
-          id: 4,
-          title: 'Water Pipe Leak',
-          description: 'Water leaking from main pipe',
-          status: 'Resolved',
-          urgency: 'Low',
-          latitude: 18.5504,
-          longitude: 73.8367,
-          createdAt: '2024-01-10',
-          userEmail: 'citizen4@example.com',
-          department: 'Water Dept',
-          icon: '💧',
-        },
-        {
-          id: 5,
-          title: 'Broken Bench',
-          description: 'Park bench broken at Central Park',
-          status: 'Pending',
-          urgency: 'Medium',
-          latitude: 18.5254,
-          longitude: 73.8517,
-          createdAt: '2024-01-13',
-          userEmail: 'citizen5@example.com',
-          department: 'Public Works',
-          icon: '🪑',
-        },
-      ];
 
-      setIssues(mockIssues);
+      const res = await fetch(`${API_BASE}/admin/issues`);
+      const data = await res.json();
+
+      const formattedIssues: Issue[] = data.issues.map((issue: any) => ({
+        id: issue.id,
+        title: issue.title,
+        description: issue.description,
+        status: issue.status || "Pending",
+        urgency: issue.urgency_level || "Medium",
+        latitude: issue.location_lat,
+        longitude: issue.location_long,
+        createdAt: issue.created_at,
+        userEmail: issue.user_email,
+        department: issue.assigned_department || "Public Works",
+        icon:
+          issue.urgency_level === "High"
+            ? "🚨"
+            : issue.urgency_level === "Medium"
+              ? "⚠️"
+              : "📍",
+      }));
+
+      setIssues(formattedIssues);
+
     } catch (error) {
-      console.error('Error loading issues:', error);
+      console.error("Failed to load map issues:", error);
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -248,7 +206,7 @@ const MapViewScreen: React.FC = () => {
     ]).start();
 
     setSelectedIssue(issue);
-    
+
     // Animate map to marker
     mapRef.current?.animateToRegion({
       latitude: issue.latitude,
@@ -359,7 +317,7 @@ const MapViewScreen: React.FC = () => {
 
   const renderMarker = (issue: Issue, index: number) => {
     const markerAnimation = new Animated.Value(1);
-    
+
     return (
       <Marker
         key={issue.id}
@@ -376,10 +334,12 @@ const MapViewScreen: React.FC = () => {
               backgroundColor: urgencyColors[issue.urgency],
               transform: [
                 { scale: markerAnimation },
-                { rotate: rotateAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['0deg', '360deg'],
-                }) },
+                {
+                  rotate: rotateAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0deg', '360deg'],
+                  })
+                },
               ],
             },
           ]}
@@ -398,9 +358,9 @@ const MapViewScreen: React.FC = () => {
                 <Text style={styles.markerIcon}>{issue.icon || '📍'}</Text>
                 <View style={styles.markerBadge}>
                   <Text style={styles.markerBadgeText}>
-                    {issue.urgency === 'Urgent' ? '!!!' : 
-                     issue.urgency === 'High' ? '!!' : 
-                     issue.urgency === 'Medium' ? '!' : '•'}
+                    {issue.urgency === 'Urgent' ? '!!!' :
+                      issue.urgency === 'High' ? '!!' :
+                        issue.urgency === 'Medium' ? '!' : '•'}
                   </Text>
                 </View>
               </View>
@@ -464,22 +424,22 @@ const MapViewScreen: React.FC = () => {
 
               {/* Urgency Badge */}
               <View style={styles.urgencyBadgeContainer}>
-                <LinearGradient
-                  colors={[
-                    urgencyColors[selectedIssue.urgency],
-                    urgencyColors[selectedIssue.urgency] + 'DD',
-                  ]}
-                  style={[
-                    styles.urgencyBadge,
-                    { transform: [{ scale: pulseAnim }] },
-                  ]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                >
-                  <Text style={styles.urgencyBadgeText}>
-                    {selectedIssue.urgency.toUpperCase()} PRIORITY
-                  </Text>
-                </LinearGradient>
+                <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+                  <LinearGradient
+                    colors={[
+                      urgencyColors[selectedIssue.urgency],
+                      urgencyColors[selectedIssue.urgency] + 'DD',
+                    ]}
+                    style={styles.urgencyBadge}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    <Text style={styles.urgencyBadgeText}>
+                      {selectedIssue.urgency.toUpperCase()} PRIORITY
+                    </Text>
+                  </LinearGradient>
+                </Animated.View>
+
               </View>
 
               {/* Content */}
@@ -495,7 +455,7 @@ const MapViewScreen: React.FC = () => {
                     <Text style={styles.infoLabel}>Reporter</Text>
                     <Text style={styles.infoValue}>{selectedIssue.userEmail}</Text>
                   </View>
-                  
+
                   <View style={styles.infoItem}>
                     <Icon name="calendar-today" size={18} color="#64748B" />
                     <Text style={styles.infoLabel}>Reported</Text>
@@ -511,7 +471,7 @@ const MapViewScreen: React.FC = () => {
                       {selectedIssue.latitude.toFixed(4)}, {selectedIssue.longitude.toFixed(4)}
                     </Text>
                   </View>
-                  
+
                   <View style={styles.infoItem}>
                     <Icon name="assignment" size={18} color="#64748B" />
                     <Text style={styles.infoLabel}>Status</Text>
@@ -536,7 +496,7 @@ const MapViewScreen: React.FC = () => {
                   <Icon name="edit" size={18} color="#4361EE" />
                   <Text style={styles.actionButtonSecondaryText}>Edit Status</Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity style={styles.actionButtonPrimary}>
                   <LinearGradient
                     colors={['#4361EE', '#3A0CA3']}
@@ -583,34 +543,35 @@ const MapViewScreen: React.FC = () => {
             color="#4361EE"
           />
         </TouchableOpacity>
-        
+
         {showLegend && (
-          <Animated.View
-            style={[
-              styles.legendContent,
-              {
-                height: showLegend ? 'auto' : 0,
-              },
-            ]}
-          >
+          <Animated.View style={styles.legendContent}>
             {Object.entries(urgencyColors).map(([urgency, color]) => (
               <View key={urgency} style={styles.legendItem}>
                 <View style={styles.legendColorContainer}>
-                  <LinearGradient
-                    colors={[color, color + 'DD']}
-                    style={[
-                      styles.legendColor,
-                      { transform: [{ scale: pulseAnim }] },
-                    ]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
+
+                  {/* ✅ FIX: Animated wrapper */}
+                  <Animated.View
+                    style={{ transform: [{ scale: pulseAnim }] }}
                   >
-                    <Text style={styles.legendIcon}>
-                      {urgency === 'Urgent' ? '!!!' : 
-                       urgency === 'High' ? '!!' : 
-                       urgency === 'Medium' ? '!' : '•'}
-                    </Text>
-                  </LinearGradient>
+                    <LinearGradient
+                      colors={[color, color + 'DD']}
+                      style={styles.legendColor}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Text style={styles.legendIcon}>
+                        {urgency === 'Urgent'
+                          ? '!!!'
+                          : urgency === 'High'
+                            ? '!!'
+                            : urgency === 'Medium'
+                              ? '!'
+                              : '•'}
+                      </Text>
+                    </LinearGradient>
+                  </Animated.View>
+
                 </View>
                 <Text style={styles.legendText}>{urgency}</Text>
               </View>
@@ -620,6 +581,7 @@ const MapViewScreen: React.FC = () => {
       </LinearGradient>
     </Animated.View>
   );
+
 
   const renderFilters = () => (
     <Animated.View
@@ -637,7 +599,7 @@ const MapViewScreen: React.FC = () => {
         end={{ x: 1, y: 1 }}
       >
         <Text style={styles.filterTitle}>Filter Issues</Text>
-        
+
         <View style={styles.filterSection}>
           <Text style={styles.filterSectionTitle}>Status</Text>
           <View style={styles.filterChips}>
@@ -664,7 +626,7 @@ const MapViewScreen: React.FC = () => {
             ))}
           </View>
         </View>
-        
+
         <View style={styles.filterSection}>
           <Text style={styles.filterSectionTitle}>Urgency</Text>
           <View style={styles.filterChips}>
@@ -674,9 +636,10 @@ const MapViewScreen: React.FC = () => {
                 style={[
                   styles.filterChip,
                   activeFilters.urgency.includes(urgency) && styles.filterChipActive,
-                  { backgroundColor: activeFilters.urgency.includes(urgency) 
-                    ? urgencyColors[urgency as keyof typeof urgencyColors] + '20' 
-                    : '#FFFFFF' 
+                  {
+                    backgroundColor: activeFilters.urgency.includes(urgency)
+                      ? urgencyColors[urgency as keyof typeof urgencyColors] + '20'
+                      : '#FFFFFF'
                   },
                 ]}
                 onPress={() => toggleFilter('urgency', urgency)}
@@ -698,7 +661,7 @@ const MapViewScreen: React.FC = () => {
             ))}
           </View>
         </View>
-        
+
         <TouchableOpacity style={styles.clearFiltersButton} onPress={clearFilters}>
           <Icon name="clear-all" size={18} color="#64748B" />
           <Text style={styles.clearFiltersText}>Clear Filters</Text>
@@ -711,10 +674,14 @@ const MapViewScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
-        <Animated.View style={{ transform: [{ rotate: rotateAnim.interpolate({
-          inputRange: [0, 1],
-          outputRange: ['0deg', '360deg'],
-        }) }] }}>
+        <Animated.View style={{
+          transform: [{
+            rotate: rotateAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['0deg', '360deg'],
+            })
+          }]
+        }}>
           <Icon name="map" size={64} color="#4361EE" />
         </Animated.View>
         <Text style={styles.loadingText}>Loading map data...</Text>
@@ -725,7 +692,7 @@ const MapViewScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1A237E" />
-      
+
       {/* Header */}
       <Animated.View
         style={[
@@ -756,10 +723,14 @@ const MapViewScreen: React.FC = () => {
               </View>
             </View>
             <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
-              <Animated.View style={{ transform: [{ rotate: rotateAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['0deg', '360deg'],
-              }) }] }}>
+              <Animated.View style={{
+                transform: [{
+                  rotate: rotateAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0deg', '360deg'],
+                  })
+                }]
+              }}>
                 <Icon name="refresh" size={22} color="#FFFFFF" />
               </Animated.View>
             </TouchableOpacity>
@@ -853,7 +824,7 @@ const MapViewScreen: React.FC = () => {
               <Icon name="add" size={20} color="#FFFFFF" />
             </LinearGradient>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.controlButton}
             onPress={handleZoomOut}
@@ -867,7 +838,7 @@ const MapViewScreen: React.FC = () => {
               <Icon name="remove" size={20} color="#FFFFFF" />
             </LinearGradient>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.controlButton}
             onPress={handleFocusUserLocation}

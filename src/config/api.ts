@@ -1,2 +1,2 @@
 export const API_BASE =
-  "https://senate-grammar-queen-pit.trycloudflare.com/api";
+  "https://clicking-worldwide-lot-skills.trycloudflare.com/api";

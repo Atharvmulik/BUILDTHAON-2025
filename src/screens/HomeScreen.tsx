@@ -1,14 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from "expo-router";
+import { useAuth } from "../contexts/AuthContext";
+import { API_BASE } from "../../src/config/api";
 
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  Pressable, 
-  Dimensions, 
-  Animated, 
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  Dimensions,
+  Animated,
   StyleSheet,
   Easing
 } from 'react-native';
@@ -23,22 +25,22 @@ const COLORS = {
   background: '#F8FAFC',
   backgroundLight: '#FFFFFF',
   backgroundDark: '#0F172A',
-  
+
   // Card colors
   cardBackground: '#FFFFFF',
   cardBorder: '#E2E8F0',
-  
+
   // Accent colors (refined blue theme)
   primary: '#2563EB',
   primaryLight: '#3B82F6',
   primaryDark: '#1D4ED8',
   primaryGradient: ['#2563EB', '#3B82F6', '#60A5FA'] as const,
-  
+
   // Secondary colors
   secondary: '#7C3AED',
   secondaryLight: '#8B5CF6',
   secondaryDark: '#6D28D9',
-  
+
   // Status colors
   success: '#10B981',
   successLight: '#34D399',
@@ -48,19 +50,19 @@ const COLORS = {
   dangerLight: '#F87171',
   info: '#6366F1',
   infoLight: '#818CF8',
-  
+
   // Text colors
   textPrimary: '#1E293B',
   textSecondary: '#475569',
   textMuted: '#94A3B8',
   textLight: '#F8FAFC',
-  
+
   // UI Elements
   border: '#E2E8F0',
   borderLight: '#F1F5F9',
   shadow: 'rgba(15, 23, 42, 0.08)',
   shadowDark: 'rgba(15, 23, 42, 0.15)',
-  
+
   // Gradient colors
   gradientPrimary: ['#4169E1', '#3B82F6', '#60A5FA'] as const,
   gradientSuccess: ['#10B981', '#34D399'] as const,
@@ -164,7 +166,7 @@ function EnhancedStatsCard({ title, value, subtitle, trend, index }: StatsCardPr
               {title}
             </Text>
             {trend && (
-              <Animated.View 
+              <Animated.View
                 style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.2)',
                   paddingHorizontal: 8,
@@ -192,7 +194,7 @@ function EnhancedStatsCard({ title, value, subtitle, trend, index }: StatsCardPr
               </Animated.View>
             )}
           </View>
-          
+
           <View>
             <Text style={{
               fontSize: 28,
@@ -216,7 +218,7 @@ function EnhancedStatsCard({ title, value, subtitle, trend, index }: StatsCardPr
             )}
           </View>
         </View>
-        
+
         {/* Animated Background Pattern */}
         <Animated.View
           style={{
@@ -270,7 +272,7 @@ function EnhancedHeader() {
   }, []);
 
   return (
-    <Animated.View 
+    <Animated.View
       style={{
         backgroundColor: COLORS.backgroundDark,
         borderBottomWidth: 1,
@@ -288,7 +290,7 @@ function EnhancedHeader() {
         justifyContent: 'space-between',
       }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <Animated.View 
+          <Animated.View
             style={{
               width: 44,
               height: 44,
@@ -348,7 +350,7 @@ function EnhancedHeader() {
           })}>
             <HelpCircle size={20} color={COLORS.textLight} />
           </Pressable>
-          
+
           <Pressable style={({ pressed }) => ({
             width: 40,
             height: 40,
@@ -385,7 +387,7 @@ function EnhancedHeader() {
               </View>
             )}
           </Pressable>
-          
+
           <Pressable style={({ pressed }) => ({
             width: 40,
             height: 40,
@@ -406,7 +408,13 @@ function EnhancedHeader() {
 }
 
 // ==================== Enhanced Greeting Section ====================
-function EnhancedGreetingSection() {
+interface EnhancedGreetingSectionProps {
+  userName: string;
+  stats: any;
+  citizenScore: any;
+}
+
+function EnhancedGreetingSection({ userName, stats, citizenScore }: EnhancedGreetingSectionProps) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
@@ -504,12 +512,38 @@ function EnhancedGreetingSection() {
     outputRange: [0.1, 0.3],
   });
 
+  const today = stats?.today_reports ?? 0;
+  const week = stats?.week_reports ?? 0;
+  const total = stats?.total_reports ?? 0;
+  const resolved = stats?.resolved_reports ?? 0;
+  const pending = total - resolved;
+  const quickStats = [
+    {
+      label: 'Today',
+value: stats ? today.toString() : "-",
+      icon: '📊',
+      color: COLORS.primary
+    },
+    {
+      label: 'This Week',
+value: stats ? week.toString() : "-",
+      icon: '📈',
+      color: COLORS.secondary
+    },
+    {
+      label: 'Rating',
+      value: citizenScore?.citizen_score ? (citizenScore.citizen_score / 20).toFixed(1) : '-',
+      icon: '⭐',
+      color: COLORS.success
+    }
+  ];
+
   return (
-    <Animated.View 
+    <Animated.View
       style={{
         backgroundColor: COLORS.backgroundLight,
-        paddingHorizontal: 24, 
-        paddingTop: 28, 
+        paddingHorizontal: 24,
+        paddingTop: 28,
         paddingBottom: 28,
         borderBottomWidth: 1,
         borderBottomColor: COLORS.borderLight,
@@ -523,7 +557,7 @@ function EnhancedGreetingSection() {
       }}
     >
       {/* Animated Background Elements */}
-      <Animated.View 
+      <Animated.View
         style={{
           position: 'absolute',
           top: 0,
@@ -557,10 +591,12 @@ function EnhancedGreetingSection() {
             opacity: waveOpacity,
             transform: [
               { translateY: waveTranslateY },
-              { scale: waveAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [1, 1.5]
-              })}
+              {
+                scale: waveAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 1.5]
+                })
+              }
             ],
           }}
         />
@@ -570,14 +606,14 @@ function EnhancedGreetingSection() {
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <Text style={{ 
-              fontFamily: 'System', 
-              fontWeight: '700', 
-              fontSize: 32, 
+            <Text style={{
+              fontFamily: 'System',
+              fontWeight: '700',
+              fontSize: 32,
               color: COLORS.textPrimary,
               letterSpacing: -0.5,
             }}>
-              Good Morning, 
+              Good Morning,
             </Text>
             <Animated.View
               style={{
@@ -586,10 +622,10 @@ function EnhancedGreetingSection() {
                 opacity: waveOpacity,
               }}
             >
-              <Text style={{ 
-                fontFamily: 'System', 
-                fontWeight: '700', 
-                fontSize: 32, 
+              <Text style={{
+                fontFamily: 'System',
+                fontWeight: '700',
+                fontSize: 32,
                 color: COLORS.primary,
                 letterSpacing: -0.5,
               }}>
@@ -597,19 +633,19 @@ function EnhancedGreetingSection() {
               </Text>
             </Animated.View>
           </View>
-          
-          <Text style={{ 
-            fontFamily: 'System', 
-            fontWeight: '800', 
-            fontSize: 40, 
+
+          <Text style={{
+            fontFamily: 'System',
+            fontWeight: '800',
+            fontSize: 40,
             color: COLORS.textPrimary,
             marginBottom: 4,
             lineHeight: 44,
             letterSpacing: -0.5,
           }}>
-            Siddhi!
+            {userName || "User"}!
           </Text>
-          
+
           <Animated.View
             style={{
               flexDirection: 'row',
@@ -637,9 +673,9 @@ function EnhancedGreetingSection() {
                 })
               }]
             }} />
-            <Text style={{ 
-              fontFamily: 'System', 
-              fontSize: 16, 
+            <Text style={{
+              fontFamily: 'System',
+              fontSize: 16,
               color: COLORS.textSecondary,
               lineHeight: 24,
             }}>
@@ -668,11 +704,11 @@ function EnhancedGreetingSection() {
             elevation: 8,
             transform: [
               { scale: pressed ? 0.95 : isPressed ? 0.98 : 1 },
-              { 
+              {
                 rotate: waveAnim.interpolate({
                   inputRange: [0, 1],
                   outputRange: ['0deg', '5deg']
-                }) 
+                })
               }
             ]
           })}
@@ -695,12 +731,12 @@ function EnhancedGreetingSection() {
               fontSize: 22,
               color: COLORS.textLight,
             }}>
-              S
+              {userName?.charAt(0) || 'U'}
             </Text>
           </LinearGradient>
-          
+
           {/* Active Status Indicator */}
-          <Animated.View 
+          <Animated.View
             style={{
               position: 'absolute',
               top: 2,
@@ -727,7 +763,7 @@ function EnhancedGreetingSection() {
       </View>
 
       {/* Quick Stats Row */}
-      <Animated.View 
+      <Animated.View
         style={{
           flexDirection: 'row',
           marginTop: 28,
@@ -740,11 +776,7 @@ function EnhancedGreetingSection() {
           }]
         }}
       >
-        {[
-          { label: 'Today', value: '3', color: COLORS.primary, icon: '📊' },
-          { label: 'This Week', value: '12', color: COLORS.success, icon: '📈' },
-          { label: 'Rating', value: '4.8', color: COLORS.warning, icon: '⭐' },
-        ].map((stat, index) => (
+        {quickStats.map((stat, index) => (
           <Animated.View
             key={stat.label}
             style={{
@@ -806,13 +838,25 @@ function EnhancedGreetingSection() {
 }
 
 // ==================== Enhanced CitizenTrustScoreCard Component ====================
-const EnhancedCitizenTrustScoreCard = ({ score = 89, totalIssues = 156, resolvedIssues = 128 }) => {
+interface EnhancedCitizenTrustScoreCardProps {
+  score?: number;
+  totalIssues?: number;
+  resolvedIssues?: number;
+}
+
+const EnhancedCitizenTrustScoreCard = ({ score = 89, totalIssues = 156, resolvedIssues = 128 }: EnhancedCitizenTrustScoreCardProps) => {
   const progressAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
 
-  const citizenScoreColor = score >= 80 ? COLORS.gradientSuccess :
-    score >= 60 ? COLORS.gradientWarning : COLORS.gradientDanger;
+  // POLISHED CITIZEN SCORE LOGIC: Better color mapping with smooth transitions
+  const getScoreColor = (scoreValue: number) => {
+    if (scoreValue >= 80) return COLORS.gradientSuccess;
+    if (scoreValue >= 60) return COLORS.gradientWarning;
+    return COLORS.gradientDanger;
+  };
+
+  const citizenScoreColor = getScoreColor(score);
 
   useEffect(() => {
     // Create the loop animation
@@ -854,7 +898,7 @@ const EnhancedCitizenTrustScoreCard = ({ score = 89, totalIssues = 156, resolved
     return () => {
       glowLoopAnimation.stop();
     };
-  }, []);
+  }, [score]);
 
   const glowOpacity = glowAnim.interpolate({
     inputRange: [0, 1],
@@ -862,7 +906,7 @@ const EnhancedCitizenTrustScoreCard = ({ score = 89, totalIssues = 156, resolved
   });
 
   return (
-    <Animated.View 
+    <Animated.View
       style={{
         marginBottom: 24,
         shadowColor: COLORS.primary,
@@ -873,7 +917,7 @@ const EnhancedCitizenTrustScoreCard = ({ score = 89, totalIssues = 156, resolved
         transform: [{ scale: scaleAnim }],
       }}
     >
-      <LinearGradient 
+      <LinearGradient
         colors={COLORS.gradientPrimary}
         style={{
           borderRadius: 20,
@@ -910,8 +954,8 @@ const EnhancedCitizenTrustScoreCard = ({ score = 89, totalIssues = 156, resolved
         }}>
           Citizen Trust Score
         </Text>
-        
-        <Animated.Text 
+
+        <Animated.Text
           style={{
             fontSize: 56,
             fontWeight: '900',
@@ -930,7 +974,7 @@ const EnhancedCitizenTrustScoreCard = ({ score = 89, totalIssues = 156, resolved
         >
           {score}
         </Animated.Text>
-        
+
         <Text style={{
           fontSize: 15,
           fontWeight: '500',
@@ -942,7 +986,7 @@ const EnhancedCitizenTrustScoreCard = ({ score = 89, totalIssues = 156, resolved
         }}>
           Excellent reputation based on {totalIssues} issues with {resolvedIssues} resolved
         </Text>
-        
+
         <View style={{
           width: '100%',
           height: 12,
@@ -969,7 +1013,7 @@ const EnhancedCitizenTrustScoreCard = ({ score = 89, totalIssues = 156, resolved
             />
           </Animated.View>
         </View>
-        
+
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
           <Text style={{
             fontSize: 12,
@@ -1079,351 +1123,6 @@ function EnhancedUpdateCard({ message, index }: EnhancedUpdateCardProps) {
   );
 }
 
-// ==================== Enhanced HomeScreen Component ====================
-export default function HomeScreen() {
-  const router = useRouter();
-  const [activeCardIndex, setActiveCardIndex] = useState(0);
-  const scrollX = useRef(new Animated.Value(0)).current;
-  const scrollViewRef = useRef<ScrollView>(null);
-  const contentOpacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(contentOpacity, {
-      toValue: 1,
-      duration: 1000,
-      useNativeDriver: true,
-      easing: Easing.out(Easing.cubic),
-    }).start();
-  }, []);
-
-  const handleScroll = Animated.event(
-    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-    { useNativeDriver: false }
-  );
-
-  const handleScrollEnd = (event: any) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const index = Math.round(offsetX / (CARD_WIDTH + 32));
-    setActiveCardIndex(Math.min(Math.max(index, 0), issuesData.length - 1));
-  };
-
-  const scrollToIndex = (index: number) => {
-    scrollViewRef.current?.scrollTo({
-      x: index * (CARD_WIDTH + 32),
-      animated: true,
-    });
-    setActiveCardIndex(index);
-  };
-
-  return (
-    <Animated.View style={{ flex: 1, backgroundColor: COLORS.background, opacity: contentOpacity }}>
-      <EnhancedHeader />
-
-      <ScrollView 
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 140 }}
-      >
-        {/* Enhanced Greeting Section */}
-        <EnhancedGreetingSection />
-
-        {/* Stats Cards Section */}
-        <View style={{ paddingHorizontal: 24, marginBottom: 32, marginTop: 16 }}>
-          <Text style={{ 
-            fontFamily: 'System', 
-            fontWeight: '500', 
-            fontSize: 18, 
-            color: COLORS.textPrimary,
-            marginBottom: 20,
-            letterSpacing: -0.3,
-          }}>
-            Overview Dashboard
-          </Text>
-          <View style={{ 
-            flexDirection: 'row', 
-            justifyContent: 'space-between',
-            marginBottom: 16,
-            gap: 16,
-          }}>
-            {[
-              { title: "Total Issues", value: "156" },
-              { title: "Resolved", value: "128" },
-              { title: "Pending", value: "28" },
-            ].map((stat, index) => (
-              <View key={stat.title} style={{ flex: 1 }}>
-                <EnhancedStatsCard 
-                  title={stat.title}
-                  value={stat.value}
-                  index={index}
-                />
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Enhanced Citizen Trust Score Card */}
-        <View style={{ paddingHorizontal: 24, marginBottom: 32 }}>
-          <EnhancedCitizenTrustScoreCard 
-            score={89}
-            totalIssues={156}
-            resolvedIssues={128}
-          />
-        </View>
-
-        {/* Removed Quick Overview Section - Completely removed */}
-
-        {/* Reported Issues Section */}
-        <View style={{ marginBottom: 40 }}>
-          <View style={{ 
-            flexDirection: 'row', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            paddingHorizontal: 24,
-            marginBottom: 20,
-          }}>
-            <Text style={{ 
-              fontFamily: 'System', 
-              fontWeight: '700', 
-              fontSize: 22, 
-              color: COLORS.textPrimary,
-              letterSpacing: -0.3,
-            }}>
-              Recent Reports
-            </Text>
-            <Pressable style={({ pressed }) => ({
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              backgroundColor: pressed ? COLORS.primaryDark : COLORS.primary,
-              borderRadius: 12,
-              transform: [{ scale: pressed ? 0.95 : 1 }],
-            })}>
-              <Text style={{ 
-                fontFamily: 'System', 
-                fontWeight: '600', 
-                fontSize: 14, 
-                color: COLORS.textLight,
-              }}>
-                View All Reports →
-              </Text>
-            </Pressable>
-          </View>
-
-          {/* Carousel */}
-          <View>
-            <ScrollView
-              ref={scrollViewRef}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              pagingEnabled
-              snapToInterval={CARD_WIDTH + 32}
-              snapToAlignment="center"
-              decelerationRate="fast"
-              onScroll={handleScroll}
-              onMomentumScrollEnd={handleScrollEnd}
-              contentContainerStyle={{
-                paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2,
-                paddingVertical: 16,
-              }}
-              style={{ marginHorizontal: -24 }}
-            >
-              {issuesData.map((issue, index) => (
-                <View key={index} style={{ marginRight: 32 }}>
-                  <IssueCard
-                    {...issue}
-                    index={index}
-                    scrollX={scrollX}
-                  />
-                </View>
-              ))}
-            </ScrollView>
-
-            {/* Enhanced Carousel Controls */}
-            <View style={{
-              flexDirection: 'row',
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginTop: 24,
-              gap: 16,
-            }}>
-              <Pressable
-                onPress={() => {
-                  if (activeCardIndex > 0) {
-                    scrollToIndex(activeCardIndex - 1);
-                  }
-                }}
-                style={({ pressed }) => ({
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  backgroundColor: COLORS.cardBackground,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderWidth: 1,
-                  borderColor: COLORS.border,
-                  shadowColor: COLORS.shadowDark,
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 8,
-                  elevation: 4,
-                  opacity: activeCardIndex === 0 ? 0.5 : 1,
-                  transform: [{ scale: pressed ? 0.9 : 1 }],
-                })}
-                disabled={activeCardIndex === 0}
-              >
-                <LinearGradient
-                  colors={activeCardIndex === 0 ? 
-                    [COLORS.textMuted, COLORS.textMuted] : 
-                    COLORS.gradientPrimary}
-                  style={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: 12,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Text style={{
-                    color: COLORS.textLight,
-                    fontSize: 18,
-                    fontWeight: '700',
-                    marginLeft: -1,
-                  }}>‹</Text>
-                </LinearGradient>
-              </Pressable>
-
-              {/* Enhanced Dots */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                {issuesData.map((_, index) => (
-                  <Pressable
-                    key={index}
-                    onPress={() => scrollToIndex(index)}
-                  >
-                    <View
-                      style={{
-                        width: activeCardIndex === index ? 28 : 8,
-                        height: 8,
-                        borderRadius: 4,
-                        backgroundColor: activeCardIndex === index ? COLORS.primary : COLORS.border,
-                      }}
-                    />
-                  </Pressable>
-                ))}
-              </View>
-
-              <Pressable
-                onPress={() => {
-                  if (activeCardIndex < issuesData.length - 1) {
-                    scrollToIndex(activeCardIndex + 1);
-                  }
-                }}
-                style={({ pressed }) => ({
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  backgroundColor: COLORS.cardBackground,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderWidth: 1,
-                  borderColor: COLORS.border,
-                  shadowColor: COLORS.shadowDark,
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 8,
-                  elevation: 4,
-                  opacity: activeCardIndex === issuesData.length - 1 ? 0.5 : 1,
-                  transform: [{ scale: pressed ? 0.9 : 1 }],
-                })}
-                disabled={activeCardIndex === issuesData.length - 1}
-              >
-                <LinearGradient
-                  colors={activeCardIndex === issuesData.length - 1 ? 
-                    [COLORS.textMuted, COLORS.textMuted] : 
-                    COLORS.gradientPrimary}
-                  style={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: 12,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Text style={{
-                    color: COLORS.textLight,
-                    fontSize: 18,
-                    fontWeight: '700',
-                    marginLeft: 1,
-                  }}>›</Text>
-                </LinearGradient>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-
-        {/* Updates Section */}
-        <View style={{ paddingHorizontal: 24, marginBottom: 32 }}>
-          <Text style={{ 
-            fontFamily: 'System', 
-            fontWeight: '700', 
-            fontSize: 22, 
-            color: COLORS.textPrimary,
-            marginBottom: 20,
-            letterSpacing: -0.3,
-          }}>
-            Recent Updates
-          </Text>
-          <View style={{ gap: 16 }}>
-            {updatesData.map((update, index) => (
-              <EnhancedUpdateCard key={index} message={update} index={index} />
-            ))}
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* FOOTER NAVIGATION */}
-      <View style={styles.footer}>
-        {/* Home */}
-        <Pressable
-          style={styles.footerButton}
-          onPress={() => router.replace("/dashboard")}
-        >
-          <Home size={24} color="#2563EB" />
-          <Text style={styles.footerText}>Home</Text>
-        </Pressable>
-
-        {/* Report Issue */}
-        <Pressable
-          style={styles.footerButton}
-          onPress={() => router.replace("/dashboard/issue_report")}
-        >
-          <FileEdit size={24} color="#2563EB" />
-          <Text style={styles.footerText}>Report</Text>
-        </Pressable>
-
-        {/* My Issues */}
-        <Pressable
-          style={styles.footerButton}
-          onPress={() => router.replace("/dashboard/issues")}
-        >
-          <ClipboardList size={24} color="#2563EB" />
-          <Text style={styles.footerText}>Issues</Text>
-        </Pressable>
-
-        {/* Profile */}
-        <Pressable
-          style={styles.footerButton}
-          onPress={() => router.replace("/dashboard/profile")}
-        >
-          <User size={24} color="#2563EB" />
-          <Text style={styles.footerText}>Profile</Text>
-        </Pressable>
-      </View>
-    </Animated.View>
-  );
-}
-
 // ==================== IssueCard Component ====================
 interface IssueCardProps {
   icon: string;
@@ -1511,6 +1210,8 @@ const IssueCard: React.FC<IssueCardProps> = ({
       color: '#059669',
     },
   };
+  const safeUrgency = urgencyStyles[urgency] ?? urgencyStyles.LOW;
+  const safeStatus = statusStyles[status] ?? statusStyles.Pending;
 
   const getFormalIcon = (icon: string) => {
     const iconMap: Record<string, string> = {
@@ -1550,20 +1251,20 @@ const IssueCard: React.FC<IssueCardProps> = ({
           height: 64,
           marginBottom: 16,
         }]}>
-          <Text style={[styles.icon, { 
+          <Text style={[styles.icon, {
             color: COLORS.primary,
             fontSize: 28,
           }]}>{getFormalIcon(icon)}</Text>
         </View>
 
         <View style={[styles.textContainer, { marginBottom: 12 }]}>
-          <Text style={[styles.title, { 
+          <Text style={[styles.title, {
             color: COLORS.textPrimary,
             fontSize: 15,
             marginBottom: 4,
             fontWeight: '700',
           }]}>{title}</Text>
-          <Text style={[styles.location, { 
+          <Text style={[styles.location, {
             color: COLORS.textSecondary,
             fontSize: 11,
           }]}>{location}</Text>
@@ -1574,15 +1275,15 @@ const IssueCard: React.FC<IssueCardProps> = ({
             style={[
               styles.badge,
               {
-                backgroundColor: urgencyStyles[urgency].backgroundColor,
-                borderColor: urgencyStyles[urgency].borderColor,
+                backgroundColor: safeUrgency.backgroundColor,
+                borderColor: safeUrgency.borderColor,
                 paddingHorizontal: 10,
                 paddingVertical: 4,
               },
             ]}
           >
-            <Text style={[styles.badgeText, { 
-              color: urgencyStyles[urgency].color,
+            <Text style={[styles.badgeText, {
+              color: safeUrgency.color,
               fontSize: 10,
               fontWeight: '700',
             }]}>
@@ -1593,25 +1294,31 @@ const IssueCard: React.FC<IssueCardProps> = ({
             style={[
               styles.badge,
               {
-                backgroundColor: statusStyles[status].backgroundColor,
-                borderColor: statusStyles[status].borderColor,
+                backgroundColor: safeStatus.backgroundColor,
+                borderColor: safeStatus.borderColor,   // ✅ FIXED
                 paddingHorizontal: 10,
                 paddingVertical: 4,
               },
             ]}
           >
-            <Text style={[styles.badgeText, { 
-              color: statusStyles[status].color,
-              fontSize: 10,
-              fontWeight: '700',
-            }]}>
+            <Text
+              style={[
+                styles.badgeText,
+                {
+                  color: safeStatus.color,              // ✅ FIXED
+                  fontSize: 10,
+                  fontWeight: '700',
+                },
+              ]}
+            >
               {status}
             </Text>
           </View>
+
         </View>
 
         <View style={[styles.distanceContainer, { marginTop: 4 }]}>
-          <Text style={[styles.distanceText, { 
+          <Text style={[styles.distanceText, {
             color: COLORS.textMuted,
             fontSize: 12,
             fontWeight: '600',
@@ -1621,6 +1328,487 @@ const IssueCard: React.FC<IssueCardProps> = ({
     </Animated.View>
   );
 };
+
+// ==================== Enhanced HomeScreen Component ====================
+export default function HomeScreen() {
+  const router = useRouter();
+  const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const scrollViewRef = useRef<ScrollView>(null);
+  const contentOpacity = useRef(new Animated.Value(0)).current;
+
+  const { token } = useAuth();
+
+  const [userName, setUserName] = useState("");
+  const [stats, setStats] = useState<any>(null);
+  const [citizenScore, setCitizenScore] = useState<any>(null);
+  const [issuesData, setIssuesData] = useState<any[]>([]);
+  const [updatesData, setUpdatesData] = useState<string[]>([]);
+
+  // ADD CACHING / OPTIMIZATION: Cache data to prevent unnecessary re-fetches
+  const [loading, setLoading] = useState(true);
+  const [lastFetchTime, setLastFetchTime] = useState(0);
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+
+  useEffect(() => {
+  if (!token) return;
+  fetchData();
+}, [token]);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const headers = {
+        Authorization: `Bearer ${token}`,
+      };
+
+      // User profile
+      const userRes = await fetch(`${API_BASE}/users/me`, { headers });
+      const userData = await userRes.json();
+      setUserName(userData.full_name || "User");
+
+      // Dashboard stats
+      const statsRes = await fetch(`${API_BASE}/users/dashboard/stats`, { headers });
+      const statsData = await statsRes.json();
+      setStats(statsData);
+
+      // Citizen score
+      const scoreRes = await fetch(`${API_BASE}/users/citizen-score`, { headers });
+      const scoreData = await scoreRes.json();
+      setCitizenScore(scoreData);
+
+      // User reports (carousel) - CONNECT CAROUSEL NEXT: Properly fetching real data
+      const reportsRes = await fetch(`${API_BASE}/users/reports/filtered?status_filter=all`, { headers });
+      const reportsData = await reportsRes.json();
+      const complaints = reportsData.complaints || reportsData.issues || reportsData.reports || [];
+
+
+      const mapUrgency = (level?: string): 'URGENCY' | 'MEDIUM' | 'LOW' => {
+        switch (level) {
+          case 'High':
+            return 'URGENCY';
+          case 'Medium':
+            return 'MEDIUM';
+          case 'Low':
+            return 'LOW';
+          default:
+            return 'LOW';
+        }
+      };
+
+      // Transform API data to match IssueCard interface
+      const transformedIssues = complaints.map((issue: any) => ({
+        icon: getIssueIcon(issue.category),
+        title: issue.title || issue.category || 'Issue',
+        location: issue.location_address || 'Unknown',
+        status: issue.status || 'Pending',
+        urgency: mapUrgency(issue.urgency_level),
+        distance: issue.distance ? `${issue.distance} KM` : '0.5 KM',
+      }));
+
+
+      setIssuesData(transformedIssues);
+
+      // Activity feed
+      const activityRes = await fetch(`${API_BASE}/activity/today`,{
+        headers,
+      });
+      const activityData = await activityRes.json();
+      const activities = activityData.activities || [];
+      setUpdatesData(activities.map((a: any) => a.title || a.message));
+
+      setLastFetchTime(Date.now());
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      // Fallback to default data if API fails
+      setIssuesData(defaultIssuesData);
+      setUpdatesData(defaultUpdatesData);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper function to get icon based on category
+  const getIssueIcon = (category: string) => {
+    const iconMap: Record<string, string> = {
+      'garbage': '🗑️',
+      'waste': '🗑️',
+      'water': '💧',
+      'leak': '💧',
+      'road': '🛣️',
+      'pothole': '🛣️',
+      'light': '💡',
+      'electricity': '💡',
+    };
+
+    const lowerCategory = category?.toLowerCase() || '';
+    for (const [key, icon] of Object.entries(iconMap)) {
+      if (lowerCategory.includes(key)) return icon;
+    }
+    return '📝';
+  };
+
+  useEffect(() => {
+    Animated.timing(contentOpacity, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+      easing: Easing.out(Easing.cubic),
+    }).start();
+  }, []);
+
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+    { useNativeDriver: false }
+  );
+
+  const handleScrollEnd = (event: any) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / (CARD_WIDTH + 32));
+    setActiveCardIndex(Math.min(Math.max(index, 0), issuesData.length - 1));
+  };
+
+  const scrollToIndex = (index: number) => {
+    if (!scrollViewRef.current) return;
+
+    scrollViewRef.current.scrollTo({
+      x: index * (CARD_WIDTH + 32),
+      animated: true,
+    });
+    setActiveCardIndex(index);
+  };
+
+  // CONNECT CAROUSEL NEXT: Enhanced navigation with proper boundaries
+  const handlePrevCard = () => {
+    if (activeCardIndex > 0) {
+      scrollToIndex(activeCardIndex - 1);
+    }
+  };
+
+  const handleNextCard = () => {
+    if (activeCardIndex < issuesData.length - 1) {
+      scrollToIndex(activeCardIndex + 1);
+    }
+  };
+
+  const total = stats?.total_reports ?? 0;
+const resolved = stats?.resolved_reports ?? 0;
+const pending = total - resolved;
+
+const statsCards = [
+  { title: "Total Issues", value: total.toString() },
+  { title: "Resolved", value: resolved.toString() },
+  { title: "Pending", value: pending.toString() },
+];
+
+
+  return (
+    <Animated.View style={{ flex: 1, backgroundColor: COLORS.background, opacity: contentOpacity }}>
+      <EnhancedHeader />
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 140 }}
+        refreshControl={undefined}
+      >
+        {/* Enhanced Greeting Section */}
+        <EnhancedGreetingSection
+          userName={userName}
+          stats={stats}
+          citizenScore={citizenScore}
+        />
+
+        {/* Stats Cards Section */}
+        <View style={{ paddingHorizontal: 24, marginBottom: 32, marginTop: 16 }}>
+          <Text style={{
+            fontFamily: 'System',
+            fontWeight: '500',
+            fontSize: 18,
+            color: COLORS.textPrimary,
+            marginBottom: 20,
+            letterSpacing: -0.3,
+          }}>
+            Overview Dashboard
+          </Text>
+          <View style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            marginBottom: 16,
+            gap: 16,
+          }}>
+            {statsCards.map((stat, index) => (
+              <View key={stat.title} style={{ flex: 1 }}>
+                <EnhancedStatsCard
+                  title={stat.title}
+                  value={stat.value}
+                  index={index}
+                />
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Enhanced Citizen Trust Score Card */}
+        <View style={{ paddingHorizontal: 24, marginBottom: 32 }}>
+          <EnhancedCitizenTrustScoreCard
+            score={citizenScore?.citizen_score ?? 50}
+            totalIssues={citizenScore?.total_issues ?? 0}
+            resolvedIssues={citizenScore?.resolved_issues ?? 0}
+          />
+        </View>
+
+        {/* Reported Issues Section */}
+        <View style={{ marginBottom: 40 }}>
+          <View style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 24,
+            marginBottom: 20,
+          }}>
+            <Text style={{
+              fontFamily: 'System',
+              fontWeight: '700',
+              fontSize: 22,
+              color: COLORS.textPrimary,
+              letterSpacing: -0.3,
+            }}>
+              Recent Reports
+            </Text>
+            <Pressable
+              style={({ pressed }) => ({
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                backgroundColor: pressed ? COLORS.primaryDark : COLORS.primary,
+                borderRadius: 12,
+                transform: [{ scale: pressed ? 0.95 : 1 }],
+              })}
+              onPress={() => router.push("/dashboard/issues")}
+            >
+              <Text style={{
+                fontFamily: 'System',
+                fontWeight: '600',
+                fontSize: 14,
+                color: COLORS.textLight,
+              }}>
+                View All Reports →
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* Carousel */}
+          <View>
+            <ScrollView
+              ref={scrollViewRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              pagingEnabled
+              snapToInterval={CARD_WIDTH + 32}
+              snapToAlignment="center"
+              decelerationRate="fast"
+              onScroll={handleScroll}
+              onMomentumScrollEnd={handleScrollEnd}
+              contentContainerStyle={{
+                paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2,
+                paddingVertical: 16,
+              }}
+              style={{ marginHorizontal: -24 }}
+            >
+              {issuesData.map((issue, index) => (
+                <View key={index} style={{ marginRight: 32 }}>
+                  <IssueCard
+                    icon={issue.icon}
+                    title={issue.title}
+                    location={issue.location}
+                    status={issue.status}
+                    urgency={issue.urgency}
+                    distance={issue.distance}
+                    index={index}
+                    scrollX={scrollX}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+
+            {/* Enhanced Carousel Controls */}
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginTop: 24,
+              gap: 16,
+            }}>
+              <Pressable
+                onPress={handlePrevCard}
+                style={({ pressed }) => ({
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: COLORS.cardBackground,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 1,
+                  borderColor: COLORS.border,
+                  shadowColor: COLORS.shadowDark,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 8,
+                  elevation: 4,
+                  opacity: activeCardIndex === 0 ? 0.5 : 1,
+                  transform: [{ scale: pressed ? 0.9 : 1 }],
+                })}
+                disabled={activeCardIndex === 0}
+              >
+                <LinearGradient
+                  colors={activeCardIndex === 0 ?
+                    [COLORS.textMuted, COLORS.textMuted] :
+                    COLORS.gradientPrimary}
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Text style={{
+                    color: COLORS.textLight,
+                    fontSize: 18,
+                    fontWeight: '700',
+                    marginLeft: -1,
+                  }}>‹</Text>
+                </LinearGradient>
+              </Pressable>
+
+              {/* Enhanced Dots */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {issuesData.map((_, index) => (
+                  <Pressable
+                    key={index}
+                    onPress={() => scrollToIndex(index)}
+                  >
+                    <View
+                      style={{
+                        width: activeCardIndex === index ? 28 : 8,
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: activeCardIndex === index ? COLORS.primary : COLORS.border,
+                      }}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+
+              <Pressable
+                onPress={handleNextCard}
+                style={({ pressed }) => ({
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: COLORS.cardBackground,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 1,
+                  borderColor: COLORS.border,
+                  shadowColor: COLORS.shadowDark,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 8,
+                  elevation: 4,
+                  opacity: activeCardIndex === issuesData.length - 1 ? 0.5 : 1,
+                  transform: [{ scale: pressed ? 0.9 : 1 }],
+                })}
+                disabled={activeCardIndex === issuesData.length - 1}
+              >
+                <LinearGradient
+                  colors={activeCardIndex === issuesData.length - 1 ?
+                    [COLORS.textMuted, COLORS.textMuted] :
+                    COLORS.gradientPrimary}
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Text style={{
+                    color: COLORS.textLight,
+                    fontSize: 18,
+                    fontWeight: '700',
+                    marginLeft: 1,
+                  }}>›</Text>
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+
+        {/* Updates Section */}
+        <View style={{ paddingHorizontal: 24, marginBottom: 32 }}>
+          <Text style={{
+            fontFamily: 'System',
+            fontWeight: '700',
+            fontSize: 22,
+            color: COLORS.textPrimary,
+            marginBottom: 20,
+            letterSpacing: -0.3,
+          }}>
+            Recent Updates
+          </Text>
+          <View style={{ gap: 16 }}>
+            {updatesData.map((update, index) => (
+              <EnhancedUpdateCard key={index} message={update} index={index} />
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* FOOTER NAVIGATION */}
+      <View style={styles.footer}>
+        {/* Home */}
+        <Pressable
+          style={styles.footerButton}
+          onPress={() => router.replace("/dashboard")}
+        >
+          <Home size={24} color="#2563EB" />
+          <Text style={styles.footerText}>Home</Text>
+        </Pressable>
+
+        {/* Report Issue */}
+        <Pressable
+          style={styles.footerButton}
+          onPress={() => router.replace("/dashboard/issue_report")}
+        >
+          <FileEdit size={24} color="#2563EB" />
+          <Text style={styles.footerText}>Report</Text>
+        </Pressable>
+
+        {/* My Issues */}
+        <Pressable
+          style={styles.footerButton}
+          onPress={() => router.replace("/dashboard/issues")}
+        >
+          <ClipboardList size={24} color="#2563EB" />
+          <Text style={styles.footerText}>Issues</Text>
+        </Pressable>
+
+        {/* Profile */}
+        <Pressable
+          style={styles.footerButton}
+          onPress={() => router.replace("/dashboard/profile")}
+        >
+          <User size={24} color="#2563EB" />
+          <Text style={styles.footerText}>Profile</Text>
+        </Pressable>
+      </View>
+    </Animated.View>
+  );
+}
 
 // ==================== StyleSheet Definitions ====================
 const styles = StyleSheet.create({
@@ -1737,8 +1925,8 @@ const styles = StyleSheet.create({
   },
 });
 
-// Data arrays
-const issuesData = [
+// Default data arrays for fallback
+const defaultIssuesData = [
   {
     icon: '🗑️',
     title: 'Garbage',
@@ -1781,16 +1969,9 @@ const issuesData = [
   },
 ];
 
-const updatesData = [
+const defaultUpdatesData = [
   'New report from John D. - Pothole on Oak St.',
   "Your issue 'Garbage Overflow' has been resolved",
   'System maintenance scheduled for tomorrow',
   'New feature: Real-time tracking available',
-];
-
-const navItems = [
-  { id: 'home', icon: Home, label: 'Home' },
-  { id: 'report', icon: FileEdit, label: 'Report' },
-  { id: 'issues', icon: ClipboardList, label: 'Issues' },
-  { id: 'profile1', icon: User, label: 'Profile' },
 ];

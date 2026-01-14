@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface AuthContextType {
   token: string | null;
@@ -31,50 +31,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const loadAuthData = async () => {
-    try {
-      const storedToken = await SecureStore.getItemAsync('auth_token');
-      const storedEmail = await SecureStore.getItemAsync('user_email');
-      const storedIsAdmin = await SecureStore.getItemAsync('is_admin');
-      
-      if (storedToken && storedEmail) {
-        setToken(storedToken);
-        setUserEmail(storedEmail);
-        setIsAdmin(storedIsAdmin === 'true');
-      }
-    } catch (error) {
-      console.error('Failed to load auth data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  try {
+    const storedToken = await AsyncStorage.getItem("access_token");
+    const storedEmail = await AsyncStorage.getItem("user_email");
+    const storedIsAdmin = await AsyncStorage.getItem("is_admin");
 
-  const login = async (newToken: string, email: string, admin: boolean) => {
-    try {
-      await SecureStore.setItemAsync('auth_token', newToken);
-      await SecureStore.setItemAsync('user_email', email);
-      await SecureStore.setItemAsync('is_admin', admin.toString());
-      
-      setToken(newToken);
-      setUserEmail(email);
-      setIsAdmin(admin);
-    } catch (error) {
-      console.error('Failed to save auth data:', error);
+    if (storedToken && storedEmail) {
+      setToken(storedToken);
+      setUserEmail(storedEmail);
+      setIsAdmin(storedIsAdmin === "true");
     }
-  };
+  } catch (error) {
+    console.error("Failed to load auth data:", error);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+const login = async (newToken: string, email: string, admin: boolean) => {
+  try {
+    await AsyncStorage.setItem("access_token", newToken);
+    await AsyncStorage.setItem("user_email", email);
+    await AsyncStorage.setItem("is_admin", admin.toString());
+
+    setToken(newToken);
+    setUserEmail(email);
+    setIsAdmin(admin);
+  } catch (error) {
+    console.error("Failed to save auth data:", error);
+  }
+};
+
 
   const logout = async () => {
-    try {
-      await SecureStore.deleteItemAsync('auth_token');
-      await SecureStore.deleteItemAsync('user_email');
-      await SecureStore.deleteItemAsync('is_admin');
-      
-      setToken(null);
-      setUserEmail(null);
-      setIsAdmin(false);
-    } catch (error) {
-      console.error('Failed to clear auth data:', error);
-    }
-  };
+  try {
+    await AsyncStorage.multiRemove([
+      "access_token",
+      "user_email",
+      "is_admin",
+    ]);
+
+    setToken(null);
+    setUserEmail(null);
+    setIsAdmin(false);
+  } catch (error) {
+    console.error("Failed to clear auth data:", error);
+  }
+};
+
 
   return (
     <AuthContext.Provider value={{ token, userEmail, isAdmin, login, logout, isLoading }}>

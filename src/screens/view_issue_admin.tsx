@@ -174,7 +174,7 @@ const IssueTrackingPage: React.FC = () => {
         id: String(issue.id),
         title: issue.title,
         description: issue.description,
-        category: issue.category,
+        category: issue.category || 'Other',
         urgencyLevel: issue.urgency_level || issue.urgencyLevel,
         status: issue.status,
         userName: issue.user_name || issue.userName,
@@ -406,7 +406,11 @@ const IssueTrackingPage: React.FC = () => {
     );
   };
 
-  const getCategoryIcon = (category: string): IconName => {
+  const getCategoryIcon = (category?: string): IconName => {
+    if (!category) {
+      return 'report-problem'; // default icon
+    }
+
     switch (category.toLowerCase()) {
       case 'road maintenance':
         return 'road';
@@ -421,32 +425,39 @@ const IssueTrackingPage: React.FC = () => {
     }
   };
 
-  const getUrgencyColor = (urgency: string): string => {
-    switch (urgency.toLowerCase()) {
-      case 'high':
-      case 'urgent':
-        return '#FF4757';
-      case 'medium':
-        return '#FFA502';
-      case 'low':
-        return '#2ED573';
-      default:
-        return '#747D8C';
-    }
-  };
 
-  const getStatusColor = (status: string): string => {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return '#FFA502';
-      case 'in progress':
-        return '#1E90FF';
-      case 'resolved':
-        return '#2ED573';
-      default:
-        return '#747D8C';
-    }
-  };
+  const getUrgencyColor = (urgency?: string): string => {
+  if (!urgency) return '#747D8C';
+
+  switch (urgency.toLowerCase()) {
+    case 'high':
+    case 'urgent':
+      return '#FF4757';
+    case 'medium':
+      return '#FFA502';
+    case 'low':
+      return '#2ED573';
+    default:
+      return '#747D8C';
+  }
+};
+
+
+  const getStatusColor = (status?: string): string => {
+  if (!status) return '#747D8C';
+
+  switch (status.toLowerCase()) {
+    case 'pending':
+      return '#FFA502';
+    case 'in progress':
+      return '#1E90FF';
+    case 'resolved':
+      return '#2ED573';
+    default:
+      return '#747D8C';
+  }
+};
+
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

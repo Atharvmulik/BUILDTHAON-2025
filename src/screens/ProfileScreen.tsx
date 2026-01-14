@@ -52,21 +52,7 @@ const COLORS = {
   gradientEnd: '#3a56d4',
 };
 
-// Mock user data for frontend
-const MOCK_USER = {
-  id: 1,
-  fullName: 'John Doe',
-  email: 'john.doe@example.com',
-  mobileNumber: '+1 (555) 123-4567',
-  createdAt: '2024-01-15',
-  profileImage: null,
-  stats: {
-    totalReports: 12,
-    resolved: 8,
-    pending: 3,
-    inProgress: 1,
-  },
-};
+
 
 // Format date helper
 const formatDate = (dateString: string) => {
@@ -274,14 +260,15 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
   const nav = navigation;
   const rt = route;
 
-  const [user, setUser] = useState(MOCK_USER);
+  const [user, setUser] = useState<any>(null);
   const [token, setToken] = useState<string | null>(null);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [editForm, setEditForm] = useState({
-    fullName: MOCK_USER.fullName,
-    mobileNumber: MOCK_USER.mobileNumber,
+    fullName: "",
+    mobileNumber: "",
   });
+
   const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
@@ -306,15 +293,35 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
 
 
   const loadUserProfile = async (jwtToken: string) => {
-    const res = await fetch(`${API_BASE}/users/profile`, {
-      headers: {
-        Authorization: `Bearer ${jwtToken}`,
-      },
-    });
+    try {
+      const res = await fetch(`${API_BASE}/users/me`, {
+        headers: {
+          Authorization: `Bearer ${jwtToken}`,
+        },
+      });
 
-    const data = await res.json();
-    setUser(data);
+      if (!res.ok) throw new Error("Failed to fetch profile");
+
+      const data = await res.json();
+
+      setUser({
+        id: data.id,
+        fullName: data.full_name,
+        email: data.email,
+        mobileNumber: data.mobile_number,
+        createdAt: data.created_at,
+      });
+
+      setEditForm({
+        fullName: data.full_name,
+        mobileNumber: data.mobile_number,
+      });
+
+    } catch (err) {
+      Alert.alert("Error", "Unable to load profile");
+    }
   };
+
 
 
 
@@ -361,7 +368,7 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
 
     setIsLoading(true);
 
-    await fetch(`${API_BASE}/users/profile`, {
+    await fetch(`${API_BASE}/users/me`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -372,6 +379,7 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
         mobile_number: editForm.mobileNumber,
       }),
     });
+
 
     setIsLoading(false);
     setModalVisible(false);
@@ -410,7 +418,7 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
     nav.navigate('HomeScreen');
   };
 
-  if (isLoading && !user) {
+  if (!user) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -418,7 +426,6 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
       </View>
     );
   }
-
   return (
     <View style={styles.container}>
       {/* Custom Header */}

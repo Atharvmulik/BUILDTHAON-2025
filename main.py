@@ -19,6 +19,8 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from app import models, schemas, database
 from sqlalchemy.future import select
+from dateutil.relativedelta import relativedelta
+from app.schemas import UserProfileResponse,UserProfileUpdate
 
 from train_text_classifier import department_mapping
 import numpy as np
@@ -155,13 +157,13 @@ async def on_startup():
     async with engine.begin() as conn:
         await conn.run_sync(models.Base.metadata.create_all)
 
-# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"], 
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  
+    allow_headers=["*"],  
+    expose_headers=["*"],  
 )
 
 # Add this function to verify tokens
@@ -255,6 +257,74 @@ async def initialize_database(db: AsyncSession = Depends(get_db)):
             detail=f"Error initializing database: {str(e)}"
         )
 
+# Add these hardcoded admin emails to your seed data
+HARDCODED_ADMIN_EMAILS = [
+    'atharv@urbansim.com',
+    'siddhi@urbansim.com',
+]
+
+ADMIN_PROFILES = {
+    "atharv@urbansim.com": {
+        "name": "Atharv Mulik",
+        "email": "atharv@urbansim.com",
+        "contact": "+91 9876543210",
+        "admin_id": "ADM-2024-001"
+    },
+    "siddhi@urbansim.com": {
+        "name": "Siddhi Naik",
+        "email": "siddhi@urbansim.com",
+        "contact": "+91 9123456780",
+        "admin_id": "ADM-2024-002"
+    }
+}
+@app.get("/api/admin/profile")
+async def get_admin_profile(email: str):
+    if email not in ADMIN_PROFILES:
+        raise HTTPException(status_code=403, detail="Not an admin")
+
+    return ADMIN_PROFILES[email]
+
+
+@app.post("/init-admins")
+async def initialize_admin_users(db: AsyncSession = Depends(get_db)):
+    """
+    Initialize hardcoded admin users (run once)
+    """
+    try:
+        admins_created = []
+        
+        for i, email in enumerate(HARDCODED_ADMIN_EMAILS):
+            # Check if admin already exists
+            result = await db.execute(select(User).filter(User.email == email))
+            existing_admin = result.scalar_one_or_none()
+            
+            if not existing_admin:
+                admin_user = User(
+                    email=email,
+                    hashed_password=get_password_hash("admin123"),  
+                    full_name=f"Admin User {i+1}",
+                    mobile_number=f"98765432{i:02d}",
+                    is_admin=True
+                )
+                db.add(admin_user)
+                admins_created.append(email)
+        
+        await db.commit()
+        
+        return {
+            "message": "Admin users initialized",
+            "admins_created": admins_created,
+            "total_admins": len(HARDCODED_ADMIN_EMAILS),
+            "default_password": "admin123"
+        }
+        
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error initializing admin users: {str(e)}"
+        )
+
 @app.get("/reports/", response_model=List[dict])
 async def read_reports(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
@@ -265,20 +335,25 @@ async def read_reports(
     reports = result.scalars().all()
     return reports
 
-@app.post("/reports/")
+@app.post("/api/reports/")
 async def create_report(
     report_data: ReportCreate,
     db: AsyncSession = Depends(get_db)
 ):
     try:
-        # Validate location data
-        if not report_data.location_lat or not report_data.location_long:
+        # 1️⃣ Fetch "Reported" status
+        status_result = await db.execute(
+            select(Status).where(Status.name == "Reported")
+        )
+        reported_status = status_result.scalar_one_or_none()
+
+        if not reported_status:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Location coordinates are required"
+                status_code=500,
+                detail="Reported status not found in database"
             )
 
-        # ✅ FIXED: Use report_data attributes directly (it's a Pydantic model)
+        # 2️⃣ Create report
         db_report = Report(
             user_name=report_data.user_name,
             user_mobile=report_data.user_mobile,
@@ -291,7 +366,11 @@ async def create_report(
             location_lat=report_data.location_lat,
             location_long=report_data.location_long,
             location_address=report_data.location_address,
-            status="Pending",
+
+            # ✅ FIXED
+            status="Reported",                 # optional (legacy)
+            status_id=reported_status.id,      # source of truth
+
             department=report_data.department or "other",
             auto_assigned=report_data.auto_assigned or False,
             prediction_confidence=report_data.prediction_confidence
@@ -300,26 +379,16 @@ async def create_report(
         db.add(db_report)
         await db.commit()
         await db.refresh(db_report)
-        
+
         return {
-            "message": "Report created successfully!",
-            "report_id": db_report.id,
-            "urgency_level": report_data.urgency_level,
-            "location_provided": True,
-            "department": db_report.department,
-            "auto_assigned": db_report.auto_assigned,
-            "prediction_confidence": db_report.prediction_confidence
+            "message": "Report created successfully",
+            "report_id": db_report.id
         }
-        
-    except HTTPException:
-        raise
+
     except Exception as e:
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,  
-            detail=f"Error creating report: {str(e)}"
-        )
-    
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/reports/{report_id}")
 async def get_report(
@@ -438,36 +507,55 @@ async def signup(user_data: UserCreateEnhanced, db: AsyncSession = Depends(get_d
     
     return new_user
 
-@app.post("/login")
+@app.post("/api/login")
 async def login(login_data: UserLogin, db: AsyncSession = Depends(get_db)):
-    # Find user by email
-    result = await db.execute(select(User).filter(User.email == login_data.email))
+    result = await db.execute(
+        select(User).filter(User.email == login_data.email)
+    )
     user = result.scalar_one_or_none()
-    
-    # Verify password
+
     if not user or not verify_password(login_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password"
         )
-    
-    # Create access token
+
     access_token = create_access_token(
-        data={"sub": user.email, "is_admin": user.is_admin}
+        data={
+            "sub": user.email,
+            "is_admin": user.is_admin
+        }
     )
-    
+
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "user_id": user.id,
         "is_admin": user.is_admin,
-        "message": "Login successful! Redirecting to dashboard..."
+        "message": "Login successful"
     }
 
-# Get current user's profile
-@app.get("/users/me", response_model=UserResponse)
-async def read_users_me(current_user: User = Depends(get_current_user)):
+@app.get("/api/users/me", response_model=UserProfileResponse)
+async def read_users_me(
+    current_user: User = Depends(get_current_user)
+):
     return current_user
+@app.put("/api/users/me", response_model=UserProfileResponse)
+async def update_users_me(
+    profile_data: UserProfileUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    update_data = profile_data.dict(exclude_unset=True)
+
+    for field, value in update_data.items():
+        setattr(current_user, field, value)
+
+    await db.commit()
+    await db.refresh(current_user)
+
+    return current_user
+
 
 # Get current user's reports
 @app.get("/users/me/reports")
@@ -539,81 +627,6 @@ async def get_dashboard_summary(db: AsyncSession = Depends(get_db)):
             detail=f"Error fetching dashboard summary: {str(e)}"
         )
 
-@app.get("/reports/nearby")
-async def get_nearby_issues(
-    lat: float = Query(..., description="User latitude"),
-    long: float = Query(..., description="User longitude"),
-    radius_km: float = Query(5.0, description="Search radius in km"),
-    db: AsyncSession = Depends(get_db)
-):
-
-    try:
-        # Haversine formula for distance calculation
-        earth_radius_km = 6371
-        
-        # Calculate bounding box for initial filtering
-        lat_range = radius_km / earth_radius_km * (180 / math.pi)
-        long_range = radius_km / (earth_radius_km * math.cos(math.radians(lat))) * (180 / math.pi)
-        
-        min_lat = lat - lat_range
-        max_lat = lat + lat_range
-        min_long = long - long_range
-        max_long = long + long_range
-        
-        # Get reports within bounding box (only unresolved issues)
-        result = await db.execute(
-            select(Report)
-            .filter(
-                and_(
-                    Report.location_lat >= min_lat,
-                    Report.location_lat <= max_lat,
-                    Report.location_long >= min_long,
-                    Report.location_long <= max_long
-                )
-            )
-            .join(Status)
-            .filter(Status.name.in_(["Reported", "In Progress"]))  # Only show active issues
-        )
-        nearby_reports = result.scalars().all()
-        
-        # Calculate exact distances and filter by radius
-        reports_with_distance = []
-        for report in nearby_reports:
-            # Haversine distance calculation
-            dlat = math.radians(report.location_lat - lat)
-            dlong = math.radians(report.location_long - long)
-            a = math.sin(dlat/2) * math.sin(dlat/2) + math.cos(math.radians(lat)) * math.cos(math.radians(report.location_lat)) * math.sin(dlong/2) * math.sin(dlong/2)
-            c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-            distance = earth_radius_km * c
-            
-            if distance <= radius_km:
-                report_data = {
-                    "id": report.id,
-                    "title": report.title,
-                    "description": report.description,
-                    "urgency_level": report.issue_type,
-                    "category": report.category.name if report.category else "General",
-                    "status": report.status.name if report.status else "Reported",
-                    "location_lat": report.location_lat,
-                    "location_long": report.location_long,
-                    "location_address": report.location_address,
-                    "created_at": report.created_at,
-                    "distance_km": round(distance, 2)
-                }
-                reports_with_distance.append(report_data)
-        
-        return {
-            "user_location": {"lat": lat, "long": long},
-            "search_radius_km": radius_km,
-            "nearby_issues_count": len(reports_with_distance),
-            "nearby_issues": reports_with_distance
-        }
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching nearby issues: {str(e)}"
-        )
 
 @app.get("/reports/resolved/today")
 async def get_todays_resolved_issues(db: AsyncSession = Depends(get_db)):
@@ -669,70 +682,66 @@ async def get_todays_resolved_issues(db: AsyncSession = Depends(get_db)):
             detail=f"Error fetching today's resolved issues: {str(e)}"
         )
 
-@app.get("/activity/today")
+@app.get("/api/activity/today")
 async def get_todays_activity(db: AsyncSession = Depends(get_db)):
     """
     Returns today's public activity feed (no auth required)
     """
-    try:
-        today = date.today()
-        activities = []
-        
-        # Get new reports created today
-        new_reports_result = await db.execute(
-            select(Report)
-            .filter(func.date(Report.created_at) == today)
-            .order_by(Report.created_at.desc())
-            .limit(10)
+    today = date.today()
+    activities = []
+
+    # 1️⃣ New reports created today
+    new_reports_result = await db.execute(
+        select(Report)
+        .where(func.date(Report.created_at) == today)
+        .order_by(Report.created_at.desc())
+        .limit(10)
+    )
+    new_reports = new_reports_result.scalars().all()
+
+    for report in new_reports:
+        activities.append({
+            "type": "new_report",
+            "title": f"New {report.issue_type} issue reported",
+            "description": report.title,
+            "urgency": report.urgency_level,
+            "category": report.category or "General",
+            "timestamp": report.created_at,
+            "location": report.location_address
+        })
+
+    # 2️⃣ Issues resolved today
+    resolved_reports_result = await db.execute(
+        select(Report)
+        .join(Status, Status.id == Report.status_id)
+        .where(
+            Status.name == "Resolved",
+            func.date(Report.updated_at) == today
         )
-        new_reports = new_reports_result.scalars().all()
-        
-        for report in new_reports:
-            activities.append({
-                "type": "new_report",
-                "title": f"New {report.issue_type} issue reported",
-                "description": report.title,
-                "urgency": report.issue_type,
-                "category": report.category.name if report.category else "General",
-                "timestamp": report.created_at,
-                "location": report.location_address
-            })
-        
-        # Get issues resolved today
-        resolved_reports_result = await db.execute(
-            select(Report)
-            .join(Status)
-            .filter(Status.name == "Resolved")
-            .filter(func.date(Report.updated_at) == today)
-            .order_by(Report.updated_at.desc())
-            .limit(10)
-        )
-        resolved_reports = resolved_reports_result.scalars().all()
-        
-        for report in resolved_reports:
-            activities.append({
-                "type": "issue_resolved", 
-                "title": f"{report.issue_type} issue resolved",
-                "description": f"'{report.title}' has been fixed",
-                "category": report.category.name if report.category else "General",
-                "timestamp": report.updated_at,
-                "location": report.location_address
-            })
-        
-        # Sort activities by timestamp
-        activities.sort(key=lambda x: x["timestamp"], reverse=True)
-        
-        return {
-            "date": today.isoformat(),
-            "total_activities": len(activities),
-            "activities": activities[:15]  # Return top 15 most recent
-        }
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching today's activity: {str(e)}"
-        )
+        .order_by(Report.updated_at.desc())
+        .limit(10)
+    )
+    resolved_reports = resolved_reports_result.scalars().all()
+
+    for report in resolved_reports:
+        activities.append({
+            "type": "issue_resolved",
+            "title": f"{report.issue_type} issue resolved",
+            "description": f"'{report.title}' has been fixed",
+            "category": report.category or "General",
+            "timestamp": report.updated_at,
+            "location": report.location_address
+        })
+
+    # 3️⃣ Sort by time (latest first)
+    activities.sort(key=lambda x: x["timestamp"], reverse=True)
+
+    return {
+        "date": today.isoformat(),
+        "total_activities": len(activities),
+        "activities": activities[:15]
+    }
+
 
 @app.get("/reports/{report_id}/confirmations")
 async def get_issue_confirmations(
@@ -855,12 +864,13 @@ async def get_category_summary(db: AsyncSession = Depends(get_db)):
             detail=f"Error fetching category summary: {str(e)}"
         )
     
-@app.get("/users/reports/filtered")
+@app.get("/api/users/reports/filtered")
 async def get_user_reports_filtered(
-    status_filter: str = Query("all", description="Filter by status: all, active, resolved"),
-    user_email: str = Query(..., description="User email to filter reports"),
+    status_filter: str = Query("all"),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    user_email = current_user.email
     try:
         print(f"🔍 Fetching reports for user: {user_email}, filter: {status_filter}")
         
@@ -1015,7 +1025,7 @@ async def search_user_reports(
             detail=f"Error searching reports: {str(e)}"
         )
 
-@app.get("/reports/{report_id}/timeline")
+@app.get("/api/reports/{report_id}/timeline")
 async def get_report_timeline(
     report_id: int,
     db: AsyncSession = Depends(get_db)
@@ -1068,42 +1078,40 @@ async def get_report_timeline(
         
         # Event 1: Complaint Submitted
         timeline_events.append({
-            "event": "Complaint Submitted",
-            "description": f"Your complaint was submitted on {created_at.strftime('%d %b. %I:%M %p')}",
+            "event": "Submitted",
+            "description": "Complaint submitted",
             "timestamp": created_at.isoformat(),
             "status": "completed"
         })
         
         # Event 2: Assigned to Department
         if report_status and report_status.name in ["In Progress", "Resolved", "Closed"]:
-            assigned_time = created_at + timedelta(hours=2)
             timeline_events.append({
-                "event": "Assigned to Department",
-                "description": f"Assigned to {category.name if category else 'Public Works Department'}",
-                "timestamp": assigned_time.isoformat(),
+                "event": "Assigned",
+                "description": "Assigned to department",
+                "timestamp": (created_at + timedelta(hours=2)).isoformat(),
                 "status": "completed"
             })
+
         
         # Event 3: Work in Progress
         if report_status and report_status.name in ["In Progress", "Resolved", "Closed"]:
-            work_start_time = created_at + timedelta(hours=4)
-            expected_resolution = created_at + timedelta(days=2)
             timeline_events.append({
-                "event": "Work in Progress",
-                "description": f"Work is in progress. Expected resolution: {expected_resolution.strftime('%d %b')}",
-                "timestamp": work_start_time.isoformat(),
+                "event": "In Progress",
+                "description": "Work in progress",
+                "timestamp": (created_at + timedelta(hours=4)).isoformat(),
                 "status": "completed" if report_status.name in ["Resolved", "Closed"] else "in_progress"
             })
+
         
-        # Event 4: Resolved
-        if report_status and report_status.name in ["Resolved", "Closed"]:
-            resolved_time = updated_at
+        if report_status and report_status.name == "Resolved":
             timeline_events.append({
                 "event": "Resolved",
-                "description": f"Issue resolved on {resolved_time.strftime('%d %b, %I:%M %p')}",
-                "timestamp": resolved_time.isoformat(),
+                "description": "Issue resolved successfully",
+                "timestamp": updated_at.isoformat(),
                 "status": "completed"
             })
+
         
         # Sort timeline by timestamp
         timeline_events.sort(key=lambda x: x["timestamp"])
@@ -1152,36 +1160,37 @@ async def get_report_timeline(
 @app.get("/api/admin/issues")
 async def get_admin_issues(db: AsyncSession = Depends(get_db)):
     try:
-        # Execute query using the session
         result = await db.execute(select(Report))
         issues = result.scalars().all()
-        
-        # Convert to list of dictionaries
+
         issues_list = []
         for issue in issues:
+            if issue.location_lat is None or issue.location_long is None:
+                continue
+
             issues_list.append({
                 "id": issue.id,
                 "user_name": issue.user_name,
                 "user_email": issue.user_email,
-                "user_mobile": issue.user_mobile,
                 "title": issue.title,
                 "description": issue.description,
-                "category": issue.category,
                 "urgency_level": issue.urgency_level,
                 "status": issue.status,
                 "location_address": issue.location_address,
+
+                # ✅ REQUIRED FOR MAP
+                "location_lat": issue.location_lat,
+                "location_long": issue.location_long,
+
                 "assigned_department": issue.assigned_department,
-                "resolution_notes": issue.resolution_notes,
-                "images": issue.images,
                 "created_at": issue.created_at.isoformat() if issue.created_at else None,
-                "updated_at": issue.updated_at.isoformat() if issue.updated_at else None
             })
-        
+
         return {"issues": issues_list}
-        
+
     except Exception as e:
-        print(f"Error fetching issues: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # 2. Get Single Report Details
 @app.get("/api/admin/issues/{report_id}", response_model=schemas.ReportResponse)
@@ -1199,52 +1208,57 @@ async def get_issue_details(report_id: int, db: AsyncSession = Depends(get_db)):
 
 # 3. Update Report Status - CORRECTED FOR STRING STATUS
 @app.patch("/api/admin/issues/{report_id}/status")
-async def update_issue_status(report_id: int, status_update: schemas.StatusUpdate, db: AsyncSession = Depends(get_db)):
+async def update_issue_status(
+    report_id: int,
+    status_update: schemas.StatusUpdate,
+    db: AsyncSession = Depends(get_db)
+):
     try:
-        # Get the report
+        # 1️⃣ Fetch report
         result = await db.execute(
             select(models.Report).where(models.Report.id == report_id)
         )
         report = result.scalar_one_or_none()
-        
-        if not report:
-            raise HTTPException(status_code=404, detail="Issue not found")
-        
-        # Update the status directly as string
-        report.status = status_update.status
-        report.updated_at = datetime.utcnow()
-        
-        # Commit the changes
-        await db.commit()
-        await db.refresh(report)
-        
-        return {"message": "Status updated successfully"}
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-# 4. Assign Report to Department - CORRECTED
-@app.patch("/api/admin/issues/{report_id}/assign")
-async def assign_to_department(report_id: int, assign_data: schemas.DepartmentAssign, db: AsyncSession = Depends(get_db)):
-    try:
-        result = await db.execute(
-            select(models.Report).where(models.Report.id == report_id)
-        )
-        report = result.scalar_one_or_none()
-        
         if not report:
             raise HTTPException(status_code=404, detail="Issue not found")
-        
-        report.assigned_department = assign_data.department
+
+        # 2️⃣ Fetch Status row using provided name
+        status_result = await db.execute(
+            select(models.Status).where(models.Status.name == status_update.status)
+        )
+        new_status = status_result.scalar_one_or_none()
+
+        if not new_status:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid status '{status_update.status}'"
+            )
+
+        # 3️⃣ Update BOTH fields (CRITICAL FIX)
+        report.status_id = new_status.id            # ✅ used everywhere
+        report.status = new_status.name             # ⚠️ optional
+
         report.updated_at = datetime.utcnow()
-        
+
+        # 4️⃣ Save
         await db.commit()
         await db.refresh(report)
-        
-        return {"message": "Issue assigned to department successfully"}
+
+        return {
+            "message": "Status updated successfully",
+            "report_id": report.id,
+            "status": new_status.name
+        }
+
+    except HTTPException:
+        raise
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error: {str(e)}"
+        )
 
 # 5. Delete Report - CORRECTED (no changes needed here)
 @app.delete("/api/admin/issues/{report_id}")
@@ -1268,29 +1282,61 @@ async def delete_issue(report_id: int, db: AsyncSession = Depends(get_db)):
 
 # 6. Verify & Resolve Report - CORRECTED FOR STRING STATUS
 @app.post("/api/admin/issues/{report_id}/resolve")
-async def resolve_issue(report_id: int, resolve_data: schemas.ResolveIssue, db: AsyncSession = Depends(get_db)):
+async def resolve_issue(
+    report_id: int,
+    resolve_data: schemas.ResolveIssue,
+    db: AsyncSession = Depends(get_db)
+):
     try:
+        # 1️⃣ Fetch report
         result = await db.execute(
             select(models.Report).where(models.Report.id == report_id)
         )
         report = result.scalar_one_or_none()
-        
+
         if not report:
             raise HTTPException(status_code=404, detail="Issue not found")
-        
-        # Update status to Resolved as string
-        report.status = "Resolved"
+
+        # 2️⃣ Fetch "Resolved" status row (IMPORTANT)
+        status_result = await db.execute(
+            select(models.Status).where(models.Status.name == "Resolved")
+        )
+        resolved_status = status_result.scalar_one_or_none()
+
+        if not resolved_status:
+            raise HTTPException(
+                status_code=500,
+                detail="Resolved status not found in Status table"
+            )
+
+        # 3️⃣ Update BOTH status fields (CRITICAL FIX)
+        report.status_id = resolved_status.id      # ✅ Source of truth
+        report.status = "Resolved"                 # ⚠️ optional (legacy support)
+
+        # 4️⃣ Other fields
         report.resolution_notes = resolve_data.resolution_notes
         report.resolved_by = resolve_data.resolved_by
         report.updated_at = datetime.utcnow()
-        
+
+        # 5️⃣ Save
         await db.commit()
         await db.refresh(report)
-        
-        return {"message": "Issue resolved successfully"}
+
+        return {
+            "message": "Issue resolved successfully",
+            "report_id": report.id,
+            "status": "Resolved"
+        }
+
+    except HTTPException:
+        raise
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error: {str(e)}"
+        )
+
 
 # 7. Get All Departments - CORRECTED (no changes needed here)
 @app.get("/api/admin/departments")
@@ -1312,12 +1358,12 @@ async def get_departments():
 
 def get_department_icon(dept_name: str) -> str:
     icon_mapping = {
-        "Water Dept": "water_drop",
-        "Road Dept": "traffic", 
-        "Sanitation Dept": "clean_hands",
-        "Electricity Dept": "lightbulb",
-        "Public Works": "engineering"
-    }
+    "Water Dept": "water-drop",
+    "Road Dept": "road",
+    "Sanitation Dept": "clean-hands",
+    "Electricity Dept": "flash-on",
+    "Public Works": "engineering"
+}
     return icon_mapping.get(dept_name, "build")
 
 def get_category_from_department(dept_name: str) -> str:
@@ -1417,16 +1463,17 @@ async def get_departments_summary(
             # Only add departments that have issues
             if total_issues > 0:
                 departments_data.append({
-                    "id": len(departments_data) + 1,
-                    "name": dept_name,
-                    "icon": get_department_icon(dept_name),
-                    "resolved": resolved,
-                    "pending": pending,
-                    "progress": progress,
-                    "efficiency": efficiency,
-                    "total_issues": total_issues,
-                    "resolution_trend": generate_trend_data(efficiency)
-                })
+    "id": len(departments_data) + 1,
+    "name": dept_name,
+    "internal_name": dept_key,          # ✅ ADD
+    "icon": get_department_icon(dept_name),  # must match frontend
+    "resolved": resolved,
+    "pending": pending,
+    "progress": progress,
+    "efficiency": efficiency,
+    "total_issues": total_issues
+})
+
         
         print(f"✅ Fetched real data for {len(departments_data)} departments")
         
@@ -1443,62 +1490,76 @@ async def get_departments_summary(
             detail=f"Error fetching department summary: {str(e)}"
         )
     
+from sqlalchemy import text
+
 @app.get("/api/departments/resolution-trends")
 async def get_resolution_trends(
-    period: str = Query("month", description="Time period: week, month, year"),
+    months: int = Query(6, ge=1, le=12),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get REAL resolution trends from database
+    REAL month-wise resolution efficiency per department
     """
     try:
-        department_display_names = {
+        department_map = {
             "water_dept": "Water Dept",
             "road_dept": "Road Dept",
             "sanitation_dept": "Sanitation Dept",
-            "electricity_dept": "Electricity Dept"
+            "electricity_dept": "Electricity Dept",
         }
-        
+
         trends = []
-        
-        for dept_key, dept_name in department_display_names.items():
-            # Get total and resolved counts
-            total_result = await db.execute(
-                select(func.count(Report.id))
-                .where(Report.department == dept_key)
+
+        for dept_key, dept_name in department_map.items():
+
+            query = text("""
+                SELECT
+                    DATE_TRUNC('month', updated_at) AS month,
+                    COUNT(*) FILTER (WHERE status = 'Resolved') AS resolved,
+                    COUNT(*) AS total
+                FROM reports
+                WHERE department = :dept
+                GROUP BY month
+                ORDER BY month DESC
+                LIMIT :months
+            """)
+
+            result = await db.execute(
+                query,
+                {"dept": dept_key, "months": months}
             )
-            total = total_result.scalar() or 0
-            
-            resolved_result = await db.execute(
-                select(func.count(Report.id))
-                .where(Report.department == dept_key)
-                .where(Report.status == "Resolved")
-            )
-            resolved = resolved_result.scalar() or 0
-            
-            # Calculate current efficiency
-            current_efficiency = (resolved / total * 100) if total > 0 else 0
-            
-            # Generate realistic trend based on current efficiency
-            trend_data = generate_trend_data(current_efficiency)
-            
-            if total > 0:  # Only include departments with data
-                trends.append({
-                    "department": dept_name,
-                    "data": trend_data,
-                    "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
-                })
-        
-        print(f"✅ Resolution trends: {len(trends)} departments")
-        
+
+            rows = result.fetchall()
+            rows.reverse()  # oldest → newest
+
+            if not rows:
+                continue
+
+            data = []
+            labels = []
+
+            for row in rows:
+                efficiency = (
+                    (row.resolved / row.total) * 100
+                    if row.total > 0 else 0
+                )
+                data.append(round(efficiency, 1))
+                labels.append(row.month.strftime("%b"))
+
+            trends.append({
+                "department": dept_name,
+                "data": data,
+                "months": labels
+            })
+
         return {"trends": trends}
-        
+
     except Exception as e:
-        print(f"❌ Error fetching resolution trends: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching resolution trends: {str(e)}"
-        )   
+            status_code=500,
+            detail=f"Resolution trend error: {str(e)}"
+        )
+
 
 @app.get("/api/departments/{dept_id}")
 async def get_department_details(
@@ -1684,6 +1745,79 @@ async def update_issues_status(
             detail=f"Error updating issues status: {str(e)}"
         )
 
+def generate_trend_data(current_efficiency: float, months: int = 6):
+    """
+    Generate a realistic efficiency trend leading to current efficiency
+    """
+    base = max(current_efficiency - random.uniform(10, 25), 30)
+    step = (current_efficiency - base) / max(months - 1, 1)
+
+    trend = []
+    for i in range(months):
+        value = base + step * i + random.uniform(-2, 2)
+        trend.append(round(min(max(value, 0), 100), 1))
+
+    return trend
+@app.get("/api/departments/{dept_id}/status-breakdown")
+async def get_department_status_breakdown(
+    dept_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get resolved / pending / in-progress breakdown for a department
+    """
+    id_to_dept = {
+        1: ("water_dept", "Water Dept"),
+        2: ("road_dept", "Road Dept"),
+        3: ("sanitation_dept", "Sanitation Dept"),
+        4: ("electricity_dept", "Electricity Dept"),
+        5: ("other", "Other")
+    }
+
+    if dept_id not in id_to_dept:
+        raise HTTPException(status_code=404, detail="Department not found")
+
+    dept_key, dept_name = id_to_dept[dept_id]
+
+    total_result = await db.execute(
+        select(func.count(Report.id))
+        .where(Report.department == dept_key)
+    )
+    total = total_result.scalar() or 0
+
+    resolved = await db.execute(
+        select(func.count(Report.id))
+        .where(Report.department == dept_key)
+        .where(Report.status == "Resolved")
+    )
+    pending = await db.execute(
+        select(func.count(Report.id))
+        .where(Report.department == dept_key)
+        .where(Report.status == "Pending")
+    )
+    progress = await db.execute(
+        select(func.count(Report.id))
+        .where(Report.department == dept_key)
+        .where(Report.status == "In Progress")
+    )
+
+    resolved_count = resolved.scalar() or 0
+    pending_count = pending.scalar() or 0
+    progress_count = progress.scalar() or 0
+
+    return {
+        "department_id": dept_id,
+        "total": total,
+        "resolved": resolved_count,
+        "pending": pending_count,
+        "in_progress": progress_count,
+        "percentages": {
+            "resolved": round((resolved_count / total * 100), 1) if total else 0,
+            "pending": round((pending_count / total * 100), 1) if total else 0,
+            "in_progress": round((progress_count / total * 100), 1) if total else 0,
+        }
+    }
+
 @app.get("/api/departments/{dept_id}/efficiency-trend")
 async def get_department_efficiency_trend(
     dept_id: int,
@@ -1841,145 +1975,7 @@ class UserProfileUpdate(BaseModel):
                 raise ValueError('Mobile number must be exactly 10 digits')
         return v
 
-# User Profile Endpoints (NO AUTHENTICATION REQUIRED)
 
-@app.get("/api/users/profile", response_model=UserProfileResponse)
-async def get_user_profile_by_email(
-    email: str = Query(..., description="User email address"),
-    db: AsyncSession = Depends(get_db)
-    # REMOVED: current_user: User = Depends(get_current_user)
-):
-    """
-    Get user profile by email (Public - no auth required)
-    """
-    try:
-        # Find user by email
-        result = await db.execute(select(User).filter(User.email == email))
-        user = result.scalar_one_or_none()
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        # REMOVED: Authorization check - anyone can view any profile
-        
-        return UserProfileResponse(
-            id=user.id,
-            email=user.email,
-            full_name=user.full_name,
-            mobile_number=user.mobile_number,
-            is_admin=user.is_admin,
-            created_at=user.created_at
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching user profile: {str(e)}"
-        )
-
-@app.put("/api/users/profile", response_model=UserProfileResponse)
-async def update_user_profile(
-    profile_data: UserProfileUpdate,
-    email: str = Query(..., description="User email to update"),
-    db: AsyncSession = Depends(get_db)
-    # REMOVED: current_user: User = Depends(get_current_user)
-):
-    """
-    Update user profile by email (Public - no auth required)
-    """
-    try:
-        # Find user by email
-        result = await db.execute(select(User).filter(User.email == email))
-        user = result.scalar_one_or_none()
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        # Update fields if provided
-        update_data = profile_data.dict(exclude_unset=True)
-        
-        for field, value in update_data.items():
-            setattr(user, field, value)
-        
-        # Save changes
-        await db.commit()
-        await db.refresh(user)
-        
-        return UserProfileResponse(
-            id=user.id,
-            email=user.email,
-            full_name=user.full_name,
-            mobile_number=user.mobile_number,
-            is_admin=user.is_admin,
-            created_at=user.created_at
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error updating user profile: {str(e)}"
-        )
-
-# Alternative endpoint without email parameter (uses user ID from path)
-@app.put("/api/users/profile/{user_id}", response_model=UserProfileResponse)
-async def update_user_profile_by_id(
-    user_id: int,
-    profile_data: UserProfileUpdate,
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Update user profile by user ID (Public - no auth required)
-    """
-    try:
-        # Find user by ID
-        result = await db.execute(select(User).filter(User.id == user_id))
-        user = result.scalar_one_or_none()
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        # Update fields if provided
-        update_data = profile_data.dict(exclude_unset=True)
-        
-        for field, value in update_data.items():
-            setattr(user, field, value)
-        
-        # Save changes
-        await db.commit()
-        await db.refresh(user)
-        
-        return UserProfileResponse(
-            id=user.id,
-            email=user.email,
-            full_name=user.full_name,
-            mobile_number=user.mobile_number,
-            is_admin=user.is_admin,
-            created_at=user.created_at
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error updating user profile: {str(e)}"
-        )
-    
 
     
 # Add these endpoints to your main.py
@@ -2200,58 +2196,28 @@ async def get_admin_dashboard_stats(db: AsyncSession = Depends(get_db)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error fetching admin dashboard stats: {str(e)}"
         )
-
 @app.get("/api/admin/dashboard/monthly-trends")
 async def get_monthly_trends(db: AsyncSession = Depends(get_db)):
-    """
-    Get monthly trends data for the last 6 months
-    """
-    try:
-        # Get current date and calculate last 6 months
-        current_date = datetime.utcnow()
-        monthly_data = []
-        
-        for i in range(5, -1, -1):
-            # Calculate month start and end
-            month_date = current_date.replace(day=1) - timedelta(days=30*i)
-            month_start = month_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-            if month_date.month == 12:
-                month_end = month_date.replace(year=month_date.year+1, month=1, day=1)
-            else:
-                month_end = month_date.replace(month=month_date.month+1, day=1)
-            month_end = month_end - timedelta(days=1)
-            
-            # Get issues for this month
-            monthly_issues_result = await db.execute(
-                select(func.count(Report.id))
-                .where(Report.created_at >= month_start)
-                .where(Report.created_at <= month_end)
-            )
-            monthly_issues = monthly_issues_result.scalar() or 0
-            
-            monthly_data.append({
-                "month": month_date.strftime("%b"),
-                "issues": monthly_issues
-            })
-        
-        return {"monthly_trends": monthly_data}
-        
-    except Exception as e:
-        total_issues_result = await db.execute(select(func.count(Report.id)))
-        total_issues = total_issues_result.scalar() or 0
-        
-        base_issues = max(total_issues // 6, 10)
-        monthly_data = []
-        months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
-        
-        for i, month in enumerate(months):
-            monthly_issues = base_issues + random.randint(-10, 20)
-            monthly_data.append({
-                "month": month,
-                "issues": monthly_issues
-            })
-        
-        return {"monthly_trends": monthly_data}
+    now = datetime.utcnow().replace(day=1)
+    monthly_data = []
+
+    for i in range(5, -1, -1):
+        start = now - relativedelta(months=i)
+        end = start + relativedelta(months=1)
+
+        result = await db.execute(
+            select(func.count(Report.id))
+            .where(Report.created_at >= start)
+            .where(Report.created_at < end)
+        )
+
+        monthly_data.append({
+            "month": start.strftime("%b"),
+            "issues": result.scalar() or 0
+        })
+
+    return {"monthly_trends": monthly_data}
+
 
 @app.get("/api/admin/dashboard/department-performance")
 async def get_department_performance(db: AsyncSession = Depends(get_db)):
@@ -2427,7 +2393,7 @@ def combine_predictions(text_pred, text_confidence, img_pred=None, img_confidenc
         # Default to text prediction if both are uncertain
         return text_pred, text_confidence
 
-@app.post("/predict-department")
+@app.post("/api/predict-department")
 async def predict_department(
     description: str = Form(...),
     image: Optional[UploadFile] = File(None)
@@ -2669,3 +2635,88 @@ async def get_auto_assigned_issues(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get auto-assigned issues: {str(e)}")
+    
+
+@app.get("/api/users/dashboard/stats")
+async def get_user_dashboard_stats(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    today = date.today()
+    week_start = today - relativedelta(days=today.weekday())
+    user_email = current_user.email
+
+    total = await db.scalar(
+        select(func.count(Report.id))
+        .where(Report.user_email == user_email)
+    )
+
+    resolved = await db.scalar(
+        select(func.count(Report.id))
+        .join(Status)
+        .where(
+            Report.user_email == user_email,
+            Status.name == "Resolved"
+        )
+    )
+
+    today_reports = await db.scalar(
+        select(func.count(Report.id))
+        .where(
+            Report.user_email == user_email,
+            func.date(Report.created_at) == today
+        )
+    )
+
+    week_reports = await db.scalar(
+        select(func.count(Report.id))
+        .where(
+            Report.user_email == user_email,
+            func.date(Report.created_at) >= week_start
+        )
+    )
+
+    return {
+        "today_reports": today_reports or 0,
+        "week_reports": week_reports or 0,
+        "total_reports": total or 0,
+        "resolved_reports": resolved or 0
+    }
+
+
+
+@app.get("/api/users/citizen-score")
+async def get_citizen_trust_score(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    # Total reports
+    total_result = await db.execute(
+        select(func.count(Report.id))
+        .filter(Report.user_email == current_user.email)
+    )
+    total = total_result.scalar() or 0
+
+    # Resolved reports
+    resolved_result = await db.execute(
+        select(func.count(Report.id))
+        .join(Status)
+        .filter(
+            Report.user_email == current_user.email,
+            Status.name == "Resolved"
+        )
+    )
+    resolved = resolved_result.scalar() or 0
+
+    if total == 0:
+        score = 50
+    else:
+        resolution_rate = resolved / total
+        score = round(50 + (resolution_rate * 50))
+
+    return {
+        "citizen_score": score,
+        "total_issues": total,
+        "resolved_issues": resolved,
+        "message": "Citizen trust score calculated successfully"
+    }

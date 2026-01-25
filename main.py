@@ -22,7 +22,6 @@ from sqlalchemy.future import select
 from dateutil.relativedelta import relativedelta
 from app.schemas import UserProfileResponse,UserProfileUpdate
 
-from train_text_classifier import department_mapping
 import numpy as np
 from image_predict import original_class_labels,model
 from predict_text import predict_department_from_text

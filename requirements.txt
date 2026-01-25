@@ -26,8 +26,6 @@ fastapi[all]
 # Background tasks
 starlette==0.27.0
 
-# Machine Learning / Utility
-numpy==1.26.2
 
 
 

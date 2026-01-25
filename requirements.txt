@@ -23,7 +23,7 @@ Pillow
 
 
 # TensorFlow (CPU)
-tensorflow-cpu==2.15.0
+tensorflow
 
 # Core
 pydantic==2.5.2
